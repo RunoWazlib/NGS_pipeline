@@ -1,0 +1,25 @@
+{
+    "mode":"paired-end-mode/merged-mode",
+    "reference-fasta":"path/to/reference.fasta",
+    "output-directory":"name of output directory",
+    "paired-end-mode":{
+        "R1":"path/to/R1.fastq.gz",
+        "R2":"path/to/R2.fastq.gz"
+    },
+    "merged-mode":{
+        "R1":"path/to/merged.fastq.gz"
+    },
+    "analysis-parameters":{
+        "do-benchmarks":true,
+        "do-alignment":true,
+        "do-analysis":true,
+        "do-alignment-stats":true,
+        "do-alignment-visualization":true,
+        "do-alignment-score-plot":true,
+        "do-mpileup":true,
+        "do-mpileup-fullanalysis":true,
+        "do-mpileup-simpleanalysis":true,
+        "do-mpileup-visualization":true,
+        "do-association-analysis":true
+    }
+}
