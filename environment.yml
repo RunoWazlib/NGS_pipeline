@@ -1,4 +1,4 @@
-name: ngs-pipeline
+name: seq
 channels:
   - conda-forge
   - bioconda
@@ -11,3 +11,5 @@ dependencies:
   - bowtie2
   - samtools
   - pytest
+  - pip
+  - pytest-cov
