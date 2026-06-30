@@ -1,0 +1,13 @@
+name: ngs-pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.13.8
+  - fastqc
+  - biopython
+  - matplotlib
+  - bowtie2
+  - samtools
+  - pytest

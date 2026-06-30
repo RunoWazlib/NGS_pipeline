@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ngs-pipeline"
+version = "0.2.0"
+description = "Pipeline for next-generation sequencing analysis"
+readme = "README.md"
+requires-python = ">=3.13"
+
+authors = [
+  { name = "Ethan Rogers" }
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1"
+]
+
+[project.scripts]
+ngs-pipeline = "pipeline.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

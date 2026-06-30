@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import src.processing.fastq_benchmarks, alignment.aligner, analysis.analysis, analysis.association_analysis
+import pipeline.processing.fastq_benchmarks, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
 import json, argparse, time, subprocess
 
 def load_config(config_file_path):
@@ -31,7 +31,7 @@ def main():
         subprocess.run(command, shell=True, check=True)
 
         # Pass benchmarking parameters to the fastq_benchmarks script
-        src.processing.fastq_benchmarks.main(config["mode"], config[config["mode"]], config["output-directory"])
+        pipeline.processing.fastq_benchmarks.main(config["mode"], config[config["mode"]], config["output-directory"])
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
 
@@ -41,14 +41,14 @@ def main():
         command = f"bowtie2 --version"
         subprocess.run(command, shell=True, check=True)
         # Pass alignment parameters to the aligner script
-        alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
+        pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
     else:
         print("[*] Skipping alignment as per configuration.")
 
     if config["analysis-parameters"]["do-analysis"]:
         print("[*] Starting analysis...")
-        src.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
-        src.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
+        pipeline.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
+        pipeline.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
     else:
         print("[*] Skipping analysis as per configuration.")
 
