@@ -20,6 +20,7 @@ dev = [
 
 [project.scripts]
 ngs-pipeline = "pipeline.main:main"
+config-builder = "pipeline.config_builder:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
