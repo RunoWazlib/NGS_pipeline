@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pipeline.processing.fastq_benchmarks, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
+import pipeline.processing.fastqc_processing, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
 import json, argparse, time, subprocess
 
 def load_config(config_file_path):
@@ -26,12 +26,21 @@ def main():
     # Initialize and run scripts based on the configuration
     if config["analysis-parameters"]["do-benchmarks"]:
         print("[*] Starting fastqc benchmarks...")
-        # Print fastqc version
-        command = f"fastqc --version"
-        subprocess.run(command, shell=True, check=True)
+        # Attempt to call on fastqc
+        try:
+            # Get fastqc version
+            command = f"fastqc --version"
+            fastqc_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
+                f.write(fastqc_ver.stdout)
+            
+            # Pass parameters to the fastq benchmarks script
+            pipeline.processing.fastqc_processing.main(config["mode"], config[config["mode"]], config["output-directory"])
 
-        # Pass benchmarking parameters to the fastq_benchmarks script
-        pipeline.processing.fastq_benchmarks.main(config["mode"], config[config["mode"]], config["output-directory"])
+        # If initial command failed...
+        except subprocess.CalledProcessError:
+            print(f"[!] fastqc failed! Error: {fastqc_ver.stderr}")
+
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
 
@@ -39,7 +48,7 @@ def main():
         print("[*] Starting alignment...")
         # Print bowtie2 version
         command = f"bowtie2 --version"
-        subprocess.run(command, shell=True, check=True)
+        bowtie2_ver = subprocess.run(command, shell=True, check=True, capture_output=True)
         # Pass alignment parameters to the aligner script
         pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
     else:

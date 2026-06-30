@@ -5,7 +5,7 @@ import os, json, subprocess, pytest, shutil
 from pathlib import Path
 
 @pytest.fixture
-def successful_config(tmp_path):
+def make_config_data(tmp_path):
     """
     Fixture to create a successful configuration file for testing purposes.
     """
@@ -29,17 +29,9 @@ def successful_config(tmp_path):
             "R2": f"{tmp_path}/sample1_R2.fastq.gz"
         },
         "reference-fasta": f"{tmp_path}/reference.fasta",
-        "output-directory": str(tmp_path / "output"),
-        "analysis-parameters": {
-            "do-benchmarks": True,
-            "do-alignment": True,
-            "do-analysis": True
-        }
+        "output-directory": f"{tmp_path}/output"
     }
-    config_file = f"{tmp_path}/config.json"
-    with open(config_file, 'w') as f:
-        json.dump(config_data, f)
-    return config_file
+    return config_data
 
 class TestBasicInitialization:
     def test_paired_config_generation(self, tmp_path):
@@ -208,20 +200,40 @@ class TestBasicInitialization:
         assert "[*] Skipping alignment as per configuration." in result.stdout
         assert "[*] Skipping analysis as per configuration." in result.stdout
 
-@pytest.mark.skip(reason="incomplete test")
-class TestBasicBenchmarks:
-    def test_benchmark_execution(self, successful_config):
-        """This test verifies that the benchmarking step is executed when the corresponding flag is set to True in the config file
+class TestBasicProcessing:
+    def test_fastqc_execution(self, make_config_data, tmp_path):
+        """This test verifies that the fastqc processing step is executed when the corresponding flag is set to True in the config file
 
         Args:
-            successful_config (_type_): pytest fixture for a successful configuration file
+            tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the raw fastq.gz files
         """
+        # Make config data for this test
+        config_data = make_config_data
+        config_data["analysis-parameters"] = {
+            "do-benchmarks": True,
+            "do-alignment": False,
+            "do-analysis": False
+        }
+        config_file = f"{tmp_path}/config.json"
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
         
-        # Run ngs_driver to check that benchmarking is performed
-        command = f"ngs-pipeline --config {successful_config}"
+        # Run ngs-pipelilne to check that benchmarking is performed when specified in config.json
+        command = f"ngs-pipeline --config {config_file}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         
+        target_output_dir = Path(f"{tmp_path}/output/fastqc_results")
+
+        # Check status message from main()
         assert "[*] Starting fastqc benchmarks..." in result.stdout
+        # Check fastqc output directory exists
+        assert target_output_dir.is_dir()
+        # Check fastqc .zip files exist
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc.zip").is_relative_to(target_output_dir)
+        # Check fastqc unzip directory exists
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc").is_relative_to(target_output_dir)
+        # Check fastqc unzip has data file
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").parent == Path(f"{target_output_dir}/sample1_R1_fastqc")
 
 @pytest.mark.skip(reason="incomplete test")
 class TestBasicAlignment:
