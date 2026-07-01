@@ -1,5 +1,6 @@
 from pipeline.main import load_config
 from pipeline.config_builder import generate_json_data_paired, generate_json_data_merged
+from pipeline.alignment.aligner import generate_ref_library
 
 import os, json, subprocess, pytest, shutil
 from pathlib import Path
@@ -91,24 +92,14 @@ class TestBasicInitialization:
         assert merged_config["sample1"]["reference-fasta"] == reference_fasta_path # ensure that the reference fasta path is correctly set in the config
         assert merged_config["sample1"]["output-directory"] == f"sample1_{output_directory_name}" # ensure that the output directory is correctly set in the config
 
-    def test_load_config(self, tmp_path):
+    def test_load_config(self, make_config_data, tmp_path):
         """This test confirms that the "load_config" method correctly loads intended config information - essentially verifying the JSON lib dump + load methods
 
         Args:
             tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the config file
         """
         # Create a temporary config file
-        config_data = {
-            "mode": "paired-end-mode",
-            "reference-fasta": "reference.fasta",
-            "output-directory": "output",
-            "analysis-parameters": {
-                "do-benchmarks": True,
-                "do-alignment": True,
-                "do-analysis": True
-            }
-        }
-        
+        config_data = make_config_data
         config_file = f"{tmp_path}/config.json"
         with open(config_file, 'w') as f:
             json.dump(config_data, f)
@@ -140,7 +131,7 @@ class TestBasicInitialization:
 
         assert Path(f"{tmp_path}/generated_config_sample1.json").exists()
 
-    def test_output_dir_generation(self, tmp_path):
+    def test_output_dir_generation(self, make_config_data, tmp_path):
         """This test verifies that a. ngs_driver can read in a config file and b. that output directory is correctly generated
 
         Args:
@@ -148,15 +139,11 @@ class TestBasicInitialization:
         """
         
         # Create a temporary config file with an output directory
-        config_data = {
-            "mode": "paired-end-mode",
-            "reference-fasta": "reference.fasta",
-            "output-directory": str(tmp_path / "output"),
-            "analysis-parameters": {
-                "do-benchmarks": False,
-                "do-alignment": False,
-                "do-analysis": False
-            }
+        config_data = make_config_data
+        config_data["analysis-parameters"] = {
+            "do-benchmarks": False,
+            "do-alignment": False,
+            "do-analysis": False
         }
         
         config_file = f"{tmp_path}/config.json"
@@ -167,7 +154,8 @@ class TestBasicInitialization:
         command = f"ngs-pipeline --config {config_file}"
         subprocess.run(command, shell=True, check=True)
         
-        assert os.path.exists(tmp_path / "output") # ensure that the output directory is created
+        # Should create output directory
+        assert Path(f"{tmp_path}/output").is_relative_to(tmp_path)
     
     def test_config_flags_disabled(self, tmp_path):
         """This test verifies that the flags in the config file are correctly interpreted by ngs_driver
@@ -199,13 +187,35 @@ class TestBasicInitialization:
         assert "[*] Skipping fastqc benchmarks as per configuration." in result.stdout
         assert "[*] Skipping alignment as per configuration." in result.stdout
         assert "[*] Skipping analysis as per configuration." in result.stdout
+    
+# TODO: related - config validation
+@pytest.mark.skip(reason="incomplete test suite")
+class TestBadConfigs:
+    def test_missing_all_data(self):
+        pass
+
+    def test_missing_mode(self):
+        pass
+
+    def test_missing_reference(self):
+        pass
+
+    def test_missing_output(self):
+        pass
+
+    def test_missing_files(self):
+        pass
+
+    def test_missing_alignment_opts(self):
+        pass
 
 class TestBasicProcessing:
     def test_fastqc_execution(self, make_config_data, tmp_path):
         """This test verifies that the fastqc processing step is executed when the corresponding flag is set to True in the config file
 
         Args:
-            tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the raw fastq.gz files
+            make_config_data (_type_): pytest fixture - generates partial config data that all functional tests have
+            tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the necessary files
         """
         # Make config data for this test
         config_data = make_config_data
@@ -235,20 +245,91 @@ class TestBasicProcessing:
         # Check fastqc unzip has data file
         assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").parent == Path(f"{target_output_dir}/sample1_R1_fastqc")
 
-@pytest.mark.skip(reason="incomplete test")
 class TestBasicAlignment:
-    def test_alignment_execution(self, successful_config):
+    def test_good_reference(self, make_config_data):
+        """This test verifies that bowtie2 can make a reference database when given a good reference file
+
+        Args:
+            make_config_data (_type_): _description_
+        """
+        # Generate good config data
+        config_data = make_config_data
+        
+        # Pass along good reference file
+        result = generate_ref_library(config_data["reference-fasta"], config_data["output-directory"])
+        target_output_dir = config_data["output-directory"]
+
+        # Should make a ref_lib dir in /output/
+        assert Path(f"{target_output_dir}/ref_lib").is_relative_to(target_output_dir)
+        # Should make six '.bt2' files in /ref_lib/
+        bt2_files = []
+        for path in Path(f"{target_output_dir}/ref_lib").glob("*.bt2"):
+            bt2_files.append(path)
+        assert len(bt2_files) == 6
+        # Should return the filename of the reference file
+        assert result == f"{target_output_dir}/ref_lib/{config_data["reference-fasta"].split('/')[-1]}"
+
+    def test_bad_reference(self, tmp_path, capsys):
+        """This test verifies that bowtie2 cannot make a reference database when given a bad reference file and error is handled correctly
+
+        Args:
+            tmp_path (_type_): _description_
+            capsys (_type_): _description_
+        """
+        # Create empty reference.fasta file
+        with open(f"{tmp_path}/reference.fasta", "w") as f:
+            f.write("")
+
+        # Pass along bad reference file
+        result = generate_ref_library(f"{tmp_path}/reference.fasta",f"{tmp_path}")
+
+        target_output_dir = Path(f"{tmp_path}")
+        
+        # Should still make a ref_lib dir
+        assert Path(f"{tmp_path}/ref_lib").is_relative_to(target_output_dir)
+        # Should fail to make files
+        bt2_files = []
+        for path in Path(f"{target_output_dir}/ref_lib").glob("*.bt2"):
+            bt2_files.append(path)
+        assert len(bt2_files) == 0
+        # Should yield a subprocess error that prints to stdout
+        capture_stdout = capsys.readouterr()
+        assert "[!] Error building reference index!" in capture_stdout.out
+        # Should return none
+        assert result == None
+
+    def test_paired_alignment_execution(self, make_config_data, tmp_path):
         """This test verifies that the alignment step is executed when the corresponding flag is set to True in the config file
 
         Args:
-            successful_config (_type_): pytest fixture for a successful configuration file
+            make_config_data (_type_): pytest fixture - generates partial config data that most functional tests have / typical use-case
+            tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the necessary files
         """
+         # Make config data for this test
+        config_data = make_config_data
+        config_data["analysis-parameters"] = {
+            "do-benchmarks": False,
+            "do-alignment": True,
+            "do-analysis": False
+        }
+        config_file = f"{tmp_path}/config.json"
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
         
-        # Run ngs_driver to check that alignment is performed
-        command = f"ngs-pipeline --config {successful_config}"
+        # Run ngs-pipelilne to check that alignment is performed when specified in config.json
+        command = f"ngs-pipeline --config {config_file}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        target_output_dir = Path(config_data['output-directory'])
+
+        # Config correctly read in from pipeline - main
         assert "[*] Starting alignment..." in result.stdout
+        # Aligner did not find reference db - not generated for this test
+        assert f"[!] Reference file index not found - Building index for '{tmp_path}/reference.fasta'..." in result.stdout
+        # Aligner should make 3 files:  .bam, .bam.log, and .bam.bai
+        assert Path(f"{target_output_dir}/aligned_reads.bam").exists()
+        assert Path(f"{target_output_dir}/aligned_reads.bam.log").exists()
+        assert Path(f"{target_output_dir}/aligned_reads.bam.bai").exists()
+
 
 @pytest.mark.skip(reason="incomplete test")
 class TestBasicAnalysis:

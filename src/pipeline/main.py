@@ -20,10 +20,13 @@ def main():
     # Load configuration
     config = load_config(args.config)
 
+    # TODO: Add config validation!!!
+
     # Create output directory if it doesn't exist
     subprocess.run(["mkdir", "-p", config["output-directory"]], check=True)
 
     # Initialize and run scripts based on the configuration
+    ### FastQC processing ###
     if config["analysis-parameters"]["do-benchmarks"]:
         print("[*] Starting fastqc benchmarks...")
         # Attempt to call on fastqc
@@ -32,28 +35,39 @@ def main():
             command = f"fastqc --version"
             fastqc_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
             with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
-                f.write(fastqc_ver.stdout)
+                f.write("-"*10+"FastQC:"+"-"*10+"\n"+f"{fastqc_ver.stdout}")
             
             # Pass parameters to the fastq benchmarks script
             pipeline.processing.fastqc_processing.main(config["mode"], config[config["mode"]], config["output-directory"])
 
         # If initial command failed...
         except subprocess.CalledProcessError:
-            print(f"[!] fastqc failed! Error: {fastqc_ver.stderr}")
+            print(f"[!] fastqc failed!")
+            print(f"{fastqc_ver.stderr}")
 
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
 
+    ### Bowtie2 Alignment ###
     if config["analysis-parameters"]["do-alignment"]:
         print("[*] Starting alignment...")
-        # Print bowtie2 version
-        command = f"bowtie2 --version"
-        bowtie2_ver = subprocess.run(command, shell=True, check=True, capture_output=True)
-        # Pass alignment parameters to the aligner script
-        pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
+        try:
+            # Print bowtie2 version
+            command = f"bowtie2 --version"
+            bowtie2_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
+                    f.write("-"*10+"Bowtie2:"+"-"*10+"\n"+f"{bowtie2_ver.stdout}")
+
+            # Pass alignment parameters to the aligner script
+            pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
+
+        except subprocess.CalledProcessError:
+            print(f"[!] bowtie2 failed!")
+            print(f"{bowtie2_ver.stderr}")
     else:
         print("[*] Skipping alignment as per configuration.")
 
+    ### Analysis of Aligned Reads ###
     if config["analysis-parameters"]["do-analysis"]:
         print("[*] Starting analysis...")
         pipeline.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])

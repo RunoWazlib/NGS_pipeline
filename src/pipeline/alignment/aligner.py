@@ -6,7 +6,8 @@ def generate_ref_library(reference_fasta_path, output_directory=None):
         subprocess.run(["mkdir", "-p", f"{output_directory}/ref_lib"], check=True)
         subprocess.run(["bowtie2-build", reference_fasta_path, f"{output_directory}/ref_lib/{reference_fasta_path.split('/')[-1]}"], check=True)
     except subprocess.CalledProcessError as e:
-        print(f"[!] Error building reference index: {e}")
+        print(f"[!] Error building reference index!")
+        print(f"{e}")
         return None
     
     return f"{output_directory}/ref_lib/{reference_fasta_path.split('/')[-1]}"
@@ -17,7 +18,8 @@ def align_reads_paired(reference_fasta_path, R1_path, R2_path, output_bam_path):
         command = f"bowtie2 -x {reference_fasta_path} -1 {R1_path} -2 {R2_path} --local --sensitive-local --ignore-quals --maxins 500 2> {output_bam_path}.log | samtools view -bS - | samtools sort -o {output_bam_path} && samtools index {output_bam_path}"
         subprocess.run(command, shell=True, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"[!] Error aligning reads: {e}")
+        print("[!] Error aligning reads")
+        print(f"{e}")
         return None
 
 def align_reads_merged(reference_fasta_path, merged_reads_path, output_bam_path):
@@ -26,7 +28,8 @@ def align_reads_merged(reference_fasta_path, merged_reads_path, output_bam_path)
         command = f"bowtie2 -x {reference_fasta_path} -U {merged_reads_path} --local --sensitive-local --ignore-quals --maxins 500 2> {output_bam_path}.log | samtools view -bS - | samtools sort -o {output_bam_path} && samtools index {output_bam_path}"
         subprocess.run(command, shell=True, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"[!] Error aligning reads: {e}")
+        print("[!] Error aligning reads")
+        print(f"{e}")
         return None
 
 def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
@@ -45,12 +48,13 @@ def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
         with open(f"{output_directory}/ref_lib/{reference_fasta_path.split('/')[-1]}.1.bt2", 'r') as f:
             print(f"[*] Reference file index found in {output_directory}, skipping index building.")
             ref_library = f"{output_directory}/ref_lib/{reference_fasta_path.split('/')[-1]}"
-            pass
+
     except FileNotFoundError:
         print(f"[!] Reference file index not found - Building index for '{reference_fasta_path}'...")
         # Build a bowtie2 index for the reference file if it doesn't exist
         ref_library = generate_ref_library(reference_fasta_path, output_directory)
     
+    # TODO: move else to main() config validation
     # Align reads to the reference library
     print(f"[*] Aligning reads to reference library...")
     if alignment_mode == "paired-end-mode":
