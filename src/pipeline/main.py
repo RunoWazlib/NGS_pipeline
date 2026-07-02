@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import pipeline.processing.fastqc_processing, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
+from pipeline.config_validator import check_config_options
 import json, argparse, time, subprocess
 
 def load_config(config_file_path):
@@ -20,7 +21,12 @@ def main():
     # Load configuration
     config = load_config(args.config)
 
-    # TODO: Add config validation!!!
+    # Validate configuration options
+    try:
+        check_config_options(config)
+    except ValueError:
+        print("[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
+        return None
 
     # Create output directory if it doesn't exist
     subprocess.run(["mkdir", "-p", config["output-directory"]], check=True)

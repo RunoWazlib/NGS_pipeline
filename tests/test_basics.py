@@ -1,6 +1,7 @@
 from pipeline.main import load_config
 from pipeline.config_builder import generate_json_data_paired, generate_json_data_merged
 from pipeline.alignment.aligner import generate_ref_library
+from pipeline.config_validator import check_config_options
 
 import os, json, subprocess, pytest, shutil
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 @pytest.fixture
 def make_config_data(tmp_path):
     """
-    Fixture to create a successful configuration file for testing purposes.
+    Fixture to create a successful configuration file for testing purposes. Does not include analysis-parameters, which are added in the individual tests as needed.
     """
     # Copy necessary test files to the temporary directory
     source_dir = f"{Path(__file__).parent}/test_data"
@@ -97,6 +98,7 @@ class TestBasicInitialization:
         """This test confirms that the "load_config" method correctly loads intended config information - essentially verifying the JSON lib dump + load methods
 
         Args:
+            make_config_data (_type_): pytest fixture - generates partial config data that all functional tests have
             tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the config file
         """
         # Create a temporary config file
@@ -136,6 +138,7 @@ class TestBasicInitialization:
         """This test verifies that a. ngs_driver can read in a config file and b. that output directory is correctly generated
 
         Args:
+            make_config_data (_type_): pytest fixture - generates partial config data that all functional tests have
             tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the config file
         """
         
@@ -158,24 +161,21 @@ class TestBasicInitialization:
         # Should create output directory
         assert Path(f"{tmp_path}/output").is_relative_to(tmp_path)
     
-    def test_config_flags_disabled(self, tmp_path):
+    def test_config_flags_disabled(self, make_config_data, tmp_path):
         """This test verifies that the flags in the config file are correctly interpreted by ngs_driver
 
         Args:
+            make_config_data (_type_): pytest fixture - generates partial config data that all functional tests have
             tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test containing the config file
         """
         
         # Create a temporary config file with all flags set to False
-        config_data = {
-            "mode": "paired-end-mode",
-            "reference-fasta": "reference.fasta",
-            "output-directory": str(tmp_path / "output"),
-            "analysis-parameters": {
-                "do-benchmarks": False,
-                "do-alignment": False,
-                "do-analysis": False
+        config_data = make_config_data
+        config_data["analysis-parameters"] = {
+            "do-benchmarks": False,
+            "do-alignment": False,
+            "do-analysis": False
             }
-        }
         
         config_file = tmp_path / "config.json"
         with open(config_file, 'w') as f:
@@ -189,26 +189,147 @@ class TestBasicInitialization:
         assert "[*] Skipping alignment as per configuration." in result.stdout
         assert "[*] Skipping analysis as per configuration." in result.stdout
     
-# TODO: related - config validation
-@pytest.mark.skip(reason="incomplete test suite")
 class TestBadConfigs:
     def test_missing_all_data(self):
-        pass
+        """This tests that ValueError is thrown when no config data is given
+        """
+        config_data = {}
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+        
+        assert "[!] No configuration data provided" in str(e_info.value)
 
     def test_missing_mode(self):
-        pass
+        """This tests that ValueError is thrown when config data does not have any "mode" specified
+        """
+        config_data = {
+            "reference-fasta": "reference.fasta",
+            "output-directory": "output"
+        }
 
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] No mode specified" in str(e_info.value)
+
+    def test_invalid_mode(self):
+        """This tests that ValueError is thrown when config data has invalid "mode"
+        """
+        config_data = {
+            "mode": "invalid-mode",
+            "reference-fasta": "reference.fasta",
+            "output-directory": "output"
+        }
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Invalid mode specified" in str(e_info.value)
+    
     def test_missing_reference(self):
-        pass
+        """This tests that ValueError is thrown when config data does not have any "reference-fasta" specified
+        """
+        config_data = {
+            "mode": "paired-end-mode",
+            "output-directory": "output"
+        }
 
-    def test_missing_output(self):
-        pass
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
 
-    def test_missing_files(self):
-        pass
+        assert "[!] No reference FASTA file specified" in str(e_info.value)
 
-    def test_missing_alignment_opts(self):
-        pass
+    def test_invalid_reference(self):
+        """This tests that ValueError is thrown when config data has invalid "reference-fasta"
+        """
+        config_data = {
+            "mode": "paired-end-mode",
+            "reference-fasta": "nonexistent_reference.fasta",
+            "output-directory": "output"
+        }
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Reference FASTA file not found" in str(e_info.value)
+
+    def test_missing_output(self, make_config_data):
+        """This tests that ValueError is thrown when config data does not have any "output-directory" specified
+        """
+        config_data = make_config_data
+        # Remove output directory from the config
+        del config_data["output-directory"]
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] No output directory specified" in str(e_info.value)
+
+    def test_missing_files_paired_end_R1(self, make_config_data):
+        """This tests that ValueError is thrown when config data does not have any "R1" file specified for paired-end mode
+        """
+        config_data = make_config_data
+        # Remove R1 file from the config
+        config_data["paired-end-mode"]["R1"] = "nonexistent_R1.fastq"
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Read 1 file not found" in str(e_info.value)
+
+    def test_missing_files_paired_end_R2(self, make_config_data):
+        """This tests that ValueError is thrown when config data does not have any "R2" file specified for paired-end mode
+        """
+        config_data = make_config_data
+        # Remove R2 file from the config
+        config_data["paired-end-mode"]["R2"] = "nonexistent_R2.fastq"
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Read 2 file not found" in str(e_info.value)
+
+    def test_missing_files_merged(self, make_config_data):
+        """This tests that ValueError is thrown when config data does not have any "R1" file specified for merged mode
+        """
+        config_data = make_config_data
+        # Change mode to merged-mode and remove R1 file from the config
+        config_data["mode"] = "merged-mode"
+        config_data["merged-mode"] = {
+            "R1": "nonexistent_merged.fastq"
+        }
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Merged file not found" in str(e_info.value)
+
+    def test_missing_opts(self, make_config_data):
+        """This tests that ValueError is thrown when config data does not have any "analysis-parameters" specified
+        """
+        config_data = make_config_data
+        # make_config_data fixture doesn't include analysis-parameters
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] No analysis parameters specified" in str(e_info.value)
+
+    def test_invalid_opts(self, make_config_data):
+        """This tests that ValueError is thrown when config data has invalid "analysis-parameters"
+        """
+        config_data = make_config_data
+        # Add invalid analysis-parameters
+        config_data["analysis-parameters"] = {
+            "do-benchmarks": "foobar",  # Invalid, should be boolean
+            "do-alignment": False,
+            "do-analysis": False
+        }
+
+        with pytest.raises(ValueError) as e_info:
+            check_config_options(config_data)
+
+        assert "[!] Invalid value for 'do-benchmarks' - must be a boolean (True/False)" in str(e_info.value)
 
 class TestBasicProcessing:
     def test_fastqc_execution(self, make_config_data, tmp_path):
@@ -251,7 +372,7 @@ class TestBasicAlignment:
         """This test verifies that bowtie2 can make a reference database when given a good reference file
 
         Args:
-            make_config_data (_type_): _description_
+            make_config_data (_type_):pytest fixture - generates partial config data that all functional tests have
         """
         # Generate good config data
         config_data = make_config_data
@@ -274,8 +395,8 @@ class TestBasicAlignment:
         """This test verifies that bowtie2 cannot make a reference database when given a bad reference file and error is handled correctly
 
         Args:
-            tmp_path (_type_): _description_
-            capsys (_type_): _description_
+            tmp_path (_type_): pytest temporary directory fixture
+            capsys (_type_): pytest fixture for capturing stdout and stderr
         """
         # Create empty reference.fasta file
         with open(f"{tmp_path}/reference.fasta", "w") as f:
@@ -336,11 +457,12 @@ class TestBasicAnalysis:
         """This test verifies that the analysis step is executed when the corresponding flag is set to True in the config file
 
         Args:
-            successful_config (_type_): pytest fixture for a successful configuration file
+            make_config_data (_type_): pytest fixture - generates partial config data that most functional tests have / typical use-case
+            tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test
         """
         config_data = make_config_data
         config_data["analysis-parameters"] = {
-            "do-benchmarking": False,
+            "do-benchmarks": False,
             "do-alignment": False,
             "do-analysis": True,
             "do-alignment-stats": True,
@@ -364,11 +486,18 @@ class TestBasicAnalysis:
         # Main reads in config correct
         assert "[*] Starting analysis..." in result.stdout
         
-        # Alignment Stats generates correctly
+        # Alignment Stats dir generates correctly
         assert Path(f"{target_output_dir}/alignment_stats").is_relative_to(target_output_dir)
+        # samtools flagstat generates a file that is broken down into smaller files
+        assert Path(f"{target_output_dir}/alignment_stats/alignment_stats.txt").is_relative_to(target_output_dir)
+        # samtools stat generates a full file that is broken down into smaller files
+        assert Path(f"{target_output_dir}/alignment_stats/full_alignment_stats.txt").is_relative_to(target_output_dir)
+        # Make sure the smaller files are generated, should be 12 files in all (1 from flagstat, 11 from stat)
         alignment_stat_files = []
-        for path in Path(f"{target_output_dir}/alignment_stats/").glob("*"):
+        for path in Path(f"{target_output_dir}/alignment_stats/").iterdir():
             alignment_stat_files.append(path)
+            print(f"Alignment stat file: {path}")
+        print(f"Alignment stat files: {alignment_stat_files}")
         assert len(alignment_stat_files) == 12
 
         # Alignment visualization generates correctly

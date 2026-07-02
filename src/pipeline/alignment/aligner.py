@@ -61,8 +61,6 @@ def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
         align_reads_paired(ref_library, R1_path, R2_path, output_directory + "/aligned_reads.bam")
     elif alignment_mode == "merged-mode":
         align_reads_merged(ref_library, merged_path, output_directory + "/aligned_reads.bam")
-    else:
-        print(f"[!] Invalid alignment mode specified: {alignment_mode}")
 
     # Track the time taken for alignment
     end_time = time.perf_counter()

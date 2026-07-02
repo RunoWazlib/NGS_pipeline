@@ -1,0 +1,62 @@
+from pathlib import Path
+def check_config_options(config_data={}):
+    # Check all options of config_data to ensure options are available/correct
+    if len(config_data) == 0 or config_data is None:
+        raise ValueError("[!] No configuration data provided.")
+    
+    # Check "mode"
+    try:
+        if config_data["mode"] == "paired-end-mode":
+            pass
+        elif config_data["mode"] == "merged-mode":
+            pass
+        else:
+            raise ValueError("[!] Invalid mode specified. Use 'paired-end-mode' or 'merged-mode'")
+    except KeyError:
+        raise ValueError("[!] No mode specified.")
+    
+    # Check "reference-fasta"
+    try:
+        with open(config_data["reference-fasta"],"r") as f:
+            for line in f:
+                if line.startswith(">"):
+                    break
+    except KeyError:
+        raise ValueError("[!] No reference FASTA file specified")
+    
+    except FileNotFoundError:
+        raise ValueError("[!] Reference FASTA file not found")
+    
+    # Check "output-directory"
+    try:
+        config_data["output-directory"]
+    except KeyError:
+        raise ValueError("[!] No output directory specified")
+
+    # Check sequence files exist
+    if config_data["mode"] == "paired-end-mode":
+        try:
+            with open(config_data["paired-end-mode"]["R1"], "r") as f:
+                pass
+        except FileNotFoundError:
+            raise ValueError("[!] Read 1 file not found")
+        
+        try:
+            with open(config_data["paired-end-mode"]["R2"], "r") as f:
+                pass
+        except FileNotFoundError:
+            raise ValueError("[!] Read 2 file not found")
+    elif config_data["mode"] == "merged-mode":
+        try:
+            with open(config_data["merged-mode"]["R1"], "r") as f:
+                pass
+        except FileNotFoundError:
+            raise ValueError("[!] Merged file not found")
+        
+    # Check main analysis parameters are bool
+    try:
+        for key in config_data["analysis-parameters"]:
+            if not isinstance(config_data["analysis-parameters"][key], bool):
+                raise ValueError(f"[!] Invalid value for '{key}' - must be a boolean (True/False)")
+    except KeyError:
+        raise ValueError("[!] No analysis parameters specified")
