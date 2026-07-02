@@ -331,7 +331,6 @@ class TestBasicAlignment:
         assert Path(f"{target_output_dir}/aligned_reads.bam.log").exists()
         assert Path(f"{target_output_dir}/aligned_reads.bam.bai").exists()
 
-@pytest.mark.skip(reason="incomplete test")
 class TestBasicAnalysis:
     def test_analysis_execution(self, make_config_data, tmp_path):
         """This test verifies that the analysis step is executed when the corresponding flag is set to True in the config file
@@ -401,5 +400,6 @@ class TestBasicAnalysis:
         assert Path(f"{target_output_dir}/mpileup_depth_plot.png")
 
     # TODO - Add association test once it is dealt with in main:main
+    @pytest.mark.skip(reason="incomplete test")
     def test_association_analysis(self, make_config_data, tmp_path):
         pass
