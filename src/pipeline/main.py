@@ -35,7 +35,7 @@ def main():
             command = f"fastqc --version"
             fastqc_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
             with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
-                f.write("-"*10+"FastQC:"+"-"*10+"\n"+f"{fastqc_ver.stdout}")
+                f.write("-"*10+" FastQC "+"-"*10+"\n"+f"{fastqc_ver.stdout}")
             
             # Pass parameters to the fastq benchmarks script
             pipeline.processing.fastqc_processing.main(config["mode"], config[config["mode"]], config["output-directory"])
@@ -56,7 +56,7 @@ def main():
             command = f"bowtie2 --version"
             bowtie2_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
             with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
-                    f.write("-"*10+"Bowtie2:"+"-"*10+"\n"+f"{bowtie2_ver.stdout}")
+                    f.write("-"*10+" Bowtie2 "+"-"*10+"\n"+f"{bowtie2_ver.stdout}")
 
             # Pass alignment parameters to the aligner script
             pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
@@ -70,8 +70,20 @@ def main():
     ### Analysis of Aligned Reads ###
     if config["analysis-parameters"]["do-analysis"]:
         print("[*] Starting analysis...")
-        pipeline.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
-        pipeline.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
+        try:
+            # Print samtools version
+            command = f"samtools --version"
+            samtools_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            with open(f"{config['output-directory']}/dep_versions.log","a+") as f:
+                f.write("-"*10+" samtools "+"-"*10+"\n"+f"{samtools_ver.stdout}")
+            
+            # Pass analysis parameters to the analysis script
+            pipeline.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
+            pipeline.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
+        except subprocess.CalledProcessError:
+            print(f"[!] samtools failed!")
+            print(f"{samtools_ver.stderr}")
+
     else:
         print("[*] Skipping analysis as per configuration.")
 

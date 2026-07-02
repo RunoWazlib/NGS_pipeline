@@ -16,7 +16,8 @@ def make_config_data(tmp_path):
     fileCopys = {
         f"{source_dir}/x98_query.fasta": f"{tmp_path}/reference.fasta",
         f"{source_dir}/X98-w-Mg_R1_001.fastq.gz": f"{tmp_path}/sample1_R1.fastq.gz",
-        f"{source_dir}/X98-w-Mg_R2_001.fastq.gz": f"{tmp_path}/sample1_R2.fastq.gz"
+        f"{source_dir}/X98-w-Mg_R2_001.fastq.gz": f"{tmp_path}/sample1_R2.fastq.gz",
+        f"{source_dir}/aligned_reads.bam": f"{tmp_path}/aligned_reads.bam"
     }
     
     for source, target in fileCopys.items():
@@ -330,19 +331,75 @@ class TestBasicAlignment:
         assert Path(f"{target_output_dir}/aligned_reads.bam.log").exists()
         assert Path(f"{target_output_dir}/aligned_reads.bam.bai").exists()
 
-
 @pytest.mark.skip(reason="incomplete test")
 class TestBasicAnalysis:
-    def test_analysis_execution(self, successful_config):
+    def test_analysis_execution(self, make_config_data, tmp_path):
         """This test verifies that the analysis step is executed when the corresponding flag is set to True in the config file
 
         Args:
             successful_config (_type_): pytest fixture for a successful configuration file
         """
-        
+        config_data = make_config_data
+        config_data["analysis-parameters"] = {
+            "do-benchmarking": False,
+            "do-alignment": False,
+            "do-analysis": True,
+            "do-alignment-stats": True,
+            "do-alignment-visualization":True,
+            "do-alignment-score-plot":True,
+            "do-mpileup":True,
+            "do-mpileup-fullanalysis":True,
+            "do-mpileup-simpleanalysis":True,
+            "do-mpileup-visualization":True,
+            "do-association-analysis":True
+        }
+        config_file = f"{tmp_path}/config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+
         # Run ngs_driver to check that analysis is performed
-        command = f"ngs-pipeline --config {successful_config}"
+        command = f"ngs-pipeline --config {config_file}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        target_output_dir = Path(config_data["output-directory"])
+
+        # Main reads in config correct
         assert "[*] Starting analysis..." in result.stdout
         
+        # Alignment Stats generates correctly
+        assert Path(f"{target_output_dir}/alignment_stats").is_relative_to(target_output_dir)
+        alignment_stat_files = []
+        for path in Path(f"{target_output_dir}/alignment_stats/").glob("*"):
+            alignment_stat_files.append(path)
+        assert len(alignment_stat_files) == 12
+
+        # Alignment visualization generates correctly
+        assert Path(f"{target_output_dir}/all_reads.txt").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/global_alignment_matrix.txt").is_relative_to(target_output_dir)
+
+        # Alignment score plot generates correctly
+        assert Path(f"{target_output_dir}/alignment_scores.txt").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/alignment_score_plot.png").is_relative_to(target_output_dir)
+
+        # mpileup generates correctly
+            # mpileup should generate a new reference index for itself
+        assert "[!] Reference fasta index not found for samtools mpileup, generating index..." in result.stdout
+            # new referenece index should end up in /output/ref_lib/
+        assert Path(f"{target_output_dir}/ref_lib/reference.fasta.fai").is_relative_to(Path(f"{target_output_dir}/ref_lib/"))
+            # mpileup file ends up in output
+        assert Path(f"{target_output_dir}/aligned_reads.bam_mpileup.txt").is_relative_to(Path(f"{target_output_dir}"))
+
+        # mpileup is analyzed
+            # Full analysis generates
+        assert Path(f"{target_output_dir}/mpileup_full_analysis.txt").is_relative_to(f"{target_output_dir}")
+            # Partial analysis generates
+        assert Path(f"{target_output_dir}/mpileup_simple_analysis.txt").is_relative_to(f"{target_output_dir}")
+
+        # mpileup is visualized
+        assert Path(f"{target_output_dir}/mpileup_percent_identical_plot.png")
+        assert Path(f"{target_output_dir}/mpileup_percent_mutation_plot.png")
+        assert Path(f"{target_output_dir}/mpileup_indel_frequencies_plot.png")
+        assert Path(f"{target_output_dir}/mpileup_depth_plot.png")
+
+    # TODO - Add association test once it is dealt with in main:main
+    def test_association_analysis(self, make_config_data, tmp_path):
+        pass

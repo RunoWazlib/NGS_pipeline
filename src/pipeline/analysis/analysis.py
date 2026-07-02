@@ -173,7 +173,7 @@ def generate_mpileup(aligned_bam_path, reference_fasta_path, output_directory):
             print(f"[*] Reference fasta index found for samtools mpileup, skipping index generation.")
             pass
     except FileNotFoundError:
-        print(f"[!] Reference fasta index not found for samtools mpileup, generating index...")
+        print("[!] Reference fasta index not found for samtools mpileup, generating index...")
         command = f"samtools faidx {reference_fasta_path} && mv {reference_fasta_path}.fai {output_directory}/ref_lib/"
         subprocess.run(command, shell=True, check=True)
     
@@ -399,10 +399,6 @@ def main(analysis_params, reference_fasta_path, output_directory):
     # Track the time taken for analysis
     start_time = time.perf_counter()
 
-    # Print samtools version
-    command = f"samtools --version"
-    subprocess.run(command, shell=True, check=True)
-
     # Run the analysis steps based on the specified parameters
     if analysis_params.get("do-alignment-stats", True):
         print("[*] Generating alignment statistics...")
@@ -415,7 +411,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             generate_alignment_visualization(f"{output_directory}/aligned_reads.bam", reference_fasta_path, output_directory)
             print("[*] Alignment visualization generated.")
         except Exception as e:
-            print(f"[!] Error generating alignment visualization: {e}")
+            print("[!] Error generating alignment visualization")
+            print(f"{e}")
 
     if analysis_params.get("do-alignment-score-plot", True):
         print("[*] Generating alignment score plot...")
@@ -423,7 +420,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             generate_alignment_score_plot(f"{output_directory}/aligned_reads.bam", output_directory)
             print("[*] Alignment score plot generated.")
         except Exception as e:
-            print(f"[!] Error generating alignment score plot: {e}")
+            print("[!] Error generating alignment score plot")
+            print(f"{e}")
 
     if analysis_params.get("do-mpileup", True):
         print("[*] Generating mpileup file...")
@@ -431,7 +429,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             mpileup_file = generate_mpileup(f"{output_directory}/aligned_reads.bam", reference_fasta_path, output_directory)
             print("[*] Mpileup file generated.")
         except Exception as e:
-            print(f"[!] Error generating mpileup file: {e}")
+            print("[!] Error generating mpileup file")
+            print(f"{e}")
 
     if analysis_params.get("do-mpileup-fullanalysis", True):
         print("[*] Generating full mpileup analysis...")
@@ -439,7 +438,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             generate_mpileup_full_analysis(mpileup_file, output_directory)
             print("[*] Full mpileup analysis generated.")
         except Exception as e:
-            print(f"[!] Error generating full mpileup analysis: {e}")
+            print("[!] Error generating full mpileup analysis")
+            print(f"{e}")
 
     if analysis_params.get("do-mpileup-simpleanalysis", True):
         print("[*] Generating simple mpileup analysis...")
@@ -447,7 +447,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             generate_mpileup_simple_analysis(mpileup_file, output_directory)
             print("[*] Simple mpileup analysis generated.")
         except Exception as e:
-            print(f"[!] Error generating simple mpileup analysis: {e}")
+            print("[!] Error generating simple mpileup analysis")
+            print(f"{e}")
 
     if analysis_params.get("do-mpileup-visualization", True):
         print("[*] Generating mpileup visualizations...")
@@ -455,7 +456,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             generate_mpileup_visualization(mpileup_file, output_directory)
             print("[*] Mpileup visualizations generated.")
         except Exception as e:
-            print(f"[!] Error generating mpileup visualizations: {e}")
+            print(f"[!] Error generating mpileup visualizations")
+            print(f"{e}")
 
     # Track the time taken for analysis
     end_time = time.perf_counter()
