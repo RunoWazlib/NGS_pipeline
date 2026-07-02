@@ -13,3 +13,4 @@ dependencies:
   - pytest
   - pip
   - pytest-cov
+  - cutadapt

@@ -60,3 +60,25 @@ def check_config_options(config_data={}):
                 raise ValueError(f"[!] Invalid value for '{key}' - must be a boolean (True/False)")
     except KeyError:
         raise ValueError("[!] No analysis parameters specified")
+    
+    # Check processing parameters are valid, if processing parameters exist
+    try:
+        if config_data["analysis-parameters"]["do-processing"] == True:
+            try:
+                if not isinstance(config_data["processing-parameters"]["do-qtrimming"], bool):
+                    raise ValueError("[!] Invalid value for 'do-qtrimming' - must be a boolean (True/False)")
+                
+                if config_data["processing-parameters"]["qtrimming-method"] not in ["rolling-trim", "simple-trim"]:
+                    raise ValueError("[!] Invalid value for 'qtrimming-method' - must be 'rolling-trim' or 'simple-trim'")
+                
+                if not isinstance(config_data["processing-parameters"]["trimming-window-size"], int):
+                    raise ValueError("[!] Invalid value for 'trimming-window-size' - must be an integer")
+                
+                if not isinstance(config_data["processing-parameters"]["trimming-quality-threshold"], int):
+                    raise ValueError("[!] Invalid value for 'trimming-quality-threshold' - must be an integer")
+            except KeyError:
+                raise ValueError("[!] No processing parameters specified")
+    except KeyError:
+        # Non-bool "do-processing" caught by "main analysis parameters" check above, so we can ignore this KeyError
+        # No processing parameters specified, but this is optional if do-processing is False
+        pass

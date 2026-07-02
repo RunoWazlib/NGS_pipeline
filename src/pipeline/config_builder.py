@@ -34,6 +34,7 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
         },
         "analysis-parameters": {
             "do-benchmarks": True,
+            "do-processing": True,
             "do-alignment": True,
             "do-analysis": True,
             "do-alignment-stats": True,
@@ -44,6 +45,12 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
             "do-mpileup-simpleanalysis": True,
             "do-mpileup-visualization": True,
             "do-association-analysis": True
+        },
+        "processing-parameters": {
+            "do-qtrimming": True,
+            "qtrimming-method": "rolling-trim",
+            "trimming-window-size": 5,
+            "trimming-quality-threshold": 20
         }
     }
     return config_data
@@ -68,6 +75,7 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
             },
             "analysis-parameters": {
                 "do-benchmarks": True,
+                "do-processing": True,
                 "do-alignment": True,
                 "do-analysis": True,
                 "do-alignment-stats": True,
@@ -78,6 +86,12 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
                 "do-mpileup-simpleanalysis": True,
                 "do-mpileup-visualization": True,
                 "do-association-analysis": True
+            },
+            "processing-parameters": {
+                "do-qtrimming": True,
+                "qtrimming-method": "rolling-trim",
+                "trimming-window-size": 5,
+                "trimming-quality-threshold": 20
             }
         }
     return config_data

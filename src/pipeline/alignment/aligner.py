@@ -53,8 +53,7 @@ def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
         print(f"[!] Reference file index not found - Building index for '{reference_fasta_path}'...")
         # Build a bowtie2 index for the reference file if it doesn't exist
         ref_library = generate_ref_library(reference_fasta_path, output_directory)
-    
-    # TODO: move else to main() config validation
+
     # Align reads to the reference library
     print(f"[*] Aligning reads to reference library...")
     if alignment_mode == "paired-end-mode":

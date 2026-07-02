@@ -1,25 +1,66 @@
+// Get rid of these comments when you are ready to use this template, JSON does not support comments.
 {
-    "mode":"paired-end-mode/merged-mode",
-    "reference-fasta":"path/to/reference.fasta",
-    "output-directory":"name of output directory",
-    "paired-end-mode":{
-        "R1":"path/to/R1.fastq.gz",
-        "R2":"path/to/R2.fastq.gz"
+    // Specify the mode as "merged-mode" and provide both a single, merged sequence file.
+    "mode": "merged-mode",
+    "merged-mode": {
+        "R1": "{sample}_R1.fastq.gz"
     },
-    "merged-mode":{
-        "R1":"path/to/merged.fastq.gz"
+
+    // Alternatively, specify the mode as "paired-end-mode" and provide both R1 and R2 files.
+    "mode": "paired-end-mode",
+    "paired-end-mode": {
+        "R1": "sample_R1.fastq.gz",
+        "R2": "sample_R2.fastq.gz"
     },
-    "analysis-parameters":{
-        "do-benchmarks":true,
-        "do-alignment":true,
-        "do-analysis":true,
-        "do-alignment-stats":true,
-        "do-alignment-visualization":true,
-        "do-alignment-score-plot":true,
-        "do-mpileup":true,
-        "do-mpileup-fullanalysis":true,
-        "do-mpileup-simpleanalysis":true,
-        "do-mpileup-visualization":true,
-        "do-association-analysis":true
+    // Always specify the reference genome file, which should be in FASTA format.
+    "reference-fasta": "path/to/reference.fasta",
+    // Always specify the output directory where the results of the analysis will be saved.
+    "output-directory": "path/to/output/directory",
+
+    // The analysis-parameters section contains boolean flags that indicate which steps of the analysis pipeline should be performed.
+    "analysis-parameters": {
+        // do-benchmarks: If true, the pipeline will perform benchmarking of the sequence data by FastQC
+        "do-benchmarks": true,
+        // do-processing: If true, the pipeline will perform quality trimming of the reads
+        "do-processing": true,
+        // do-alignment: If true, the pipeline will perform alignment of the reads to the reference genome 
+        "do-alignment": true,
+        // do-analysis: If true, the pipeline will perform analysis of the aligned reads
+        "do-analysis": true,
+        // do-alignment-stats: If true, the pipeline will generate statistics about the alignment
+        "do-alignment-stats": true,
+        // do-alignment-visualization: If true, the pipeline will generate a visualization of the alignment
+        "do-alignment-visualization": true,
+        // do-alignment-score-plot: If true, the pipeline will generate a plot of the alignment scores
+        "do-alignment-score-plot": true,
+        // do-mpileup: If true, the pipeline will perform mpileup analysis of the aligned reads
+        "do-mpileup": true,
+        // do-mpileup-fullanalysis: If true, the pipeline will perform full mpileup analysis, breaking down the all of the data in the mpileup
+        "do-mpileup-fullanalysis": true,
+        // do-mpileup-simpleanalysis: If true, the pipeline will perform a simplified mpileup analysis, only providing a consensus sequence and conservation metric
+        "do-mpileup-simpleanalysis": true,
+        // do-mpileup-visualization: If true, the pipeline will generate a visualization of the whole mpileup
+        "do-mpileup-visualization": true,
+        // do-association-analysis: If true, the pipeline will perform association analysis on the aligned reads
+        "do-association-analysis": true
+    },
+
+    // The processing-parameters section contains parameters related to quality trimming of reads. 
+    "processing-parameters": {
+        // The do-qtrimming parameter is a boolean that indicates whether quality trimming should be performed. 
+        "do-qtrimming": true,
+         // The qtrimming-method parameter specifies the method to be used for quality trimming, which can be either "rolling-trim" or "simple-trim". 
+        "qtrimming-method": "rolling-trim",
+        // The trimming-window-size parameter specifies the size of the window used for rolling trimming 
+        "trimming-window-size": 5,
+        // The trimming-quality-threshold parameter specifies the quality threshold below which bases will be trimmed.
+        "trimming-quality-threshold": 20
+    },
+    
+    // Alternative processing-parameters section for simple trimming method
+    "processing-parameters": {
+        "do-qtrimming": true,
+        "qtrimming-method": "simple-trim",
+        "trimming-quality-threshold": 20
     }
 }

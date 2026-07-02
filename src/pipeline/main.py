@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pipeline.processing.fastqc_processing, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
+import pipeline.processing.fastqc_processing, pipeline.processing.q_trimmer, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
 from pipeline.config_validator import check_config_options
 import json, argparse, time, subprocess
 
@@ -24,8 +24,9 @@ def main():
     # Validate configuration options
     try:
         check_config_options(config)
-    except ValueError:
-        print("[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
+    except ValueError as e:
+        print(f"[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
+        print(f"[!] Error: {e}")
         return None
 
     # Create output directory if it doesn't exist
@@ -53,6 +54,20 @@ def main():
 
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
+
+    ### Sequence Pre-processing ###
+    if config["analysis-parameters"]["do-processing"] == True:
+        print("[*] Starting sequence pre-processing...")
+        if config["processing-parameters"]["do-qtrimming"] == True:
+            print("[*] Starting quality trimming...")
+            try:
+                # Pass parameters to the quality trimming script
+                pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
+            except Exception as e:
+                print(f"[!] Quality trimming failed!")
+                print(f"{e}")
+    else:
+        print("[*] Skipping sequence pre-processing as per configuration.")
 
     ### Bowtie2 Alignment ###
     if config["analysis-parameters"]["do-alignment"]:
