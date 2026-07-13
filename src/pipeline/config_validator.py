@@ -13,7 +13,7 @@ def check_config_options(config_data={}):
         else:
             raise ValueError("[!] Invalid mode specified. Use 'paired-end-mode' or 'merged-mode'")
     except KeyError:
-        raise ValueError("[!] No mode specified.")
+        raise ValueError("[!] No mode specified - Please specify a valid mode.")
     
     # Check "reference-fasta"
     try:
@@ -22,7 +22,7 @@ def check_config_options(config_data={}):
                 if line.startswith(">"):
                     break
     except KeyError:
-        raise ValueError("[!] No reference FASTA file specified")
+        raise ValueError("[!] No reference FASTA file specified - Please specify a valid reference FASTA file")
     
     except FileNotFoundError:
         raise ValueError("[!] Reference FASTA file not found")
@@ -31,7 +31,7 @@ def check_config_options(config_data={}):
     try:
         config_data["output-directory"]
     except KeyError:
-        raise ValueError("[!] No output directory specified")
+        raise ValueError("[!] No output directory specified - Please specify a valid output directory")
 
     # Check sequence files exist
     if config_data["mode"] == "paired-end-mode":
@@ -81,4 +81,4 @@ def check_config_options(config_data={}):
     except KeyError:
         # Non-bool "do-processing" caught by "main analysis parameters" check above, so we can ignore this KeyError
         # No processing parameters specified, but this is optional if do-processing is False
-        pass
+        raise ValueError("[!] 'do-processing' parameter not specified in analysis parameters")

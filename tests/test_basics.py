@@ -146,6 +146,7 @@ class TestBasicInitialization:
         config_data = make_config_data
         config_data["analysis-parameters"] = {
             "do-benchmarks": False,
+            "do-processing": False,
             "do-alignment": False,
             "do-analysis": False
         }
@@ -173,6 +174,7 @@ class TestBasicInitialization:
         config_data = make_config_data
         config_data["analysis-parameters"] = {
             "do-benchmarks": False,
+            "do-processing": False,
             "do-alignment": False,
             "do-analysis": False
             }
@@ -186,6 +188,7 @@ class TestBasicInitialization:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         
         assert "[*] Skipping fastqc benchmarks as per configuration." in result.stdout
+        assert "[*] Skipping processing as per configuration." in result.stdout
         assert "[*] Skipping alignment as per configuration." in result.stdout
         assert "[*] Skipping analysis as per configuration." in result.stdout
     
@@ -322,6 +325,7 @@ class TestBadConfigs:
         # Add invalid analysis-parameters
         config_data["analysis-parameters"] = {
             "do-benchmarks": "foobar",  # Invalid, should be boolean
+            "do-processing": False,
             "do-alignment": False,
             "do-analysis": False
         }
@@ -343,6 +347,7 @@ class TestBasicProcessing:
         config_data = make_config_data
         config_data["analysis-parameters"] = {
             "do-benchmarks": True,
+            "do-processing": False,
             "do-alignment": False,
             "do-analysis": False
         }
@@ -431,6 +436,7 @@ class TestBasicAlignment:
         config_data = make_config_data
         config_data["analysis-parameters"] = {
             "do-benchmarks": False,
+            "do-processing": False,
             "do-alignment": True,
             "do-analysis": False
         }
@@ -463,6 +469,7 @@ class TestBasicAnalysis:
         config_data = make_config_data
         config_data["analysis-parameters"] = {
             "do-benchmarks": False,
+            "do-processing": False,
             "do-alignment": False,
             "do-analysis": True,
             "do-alignment-stats": True,

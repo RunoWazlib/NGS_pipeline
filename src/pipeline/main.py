@@ -34,7 +34,7 @@ def main():
 
     # Initialize and run scripts based on the configuration
     ### FastQC processing ###
-    if config["analysis-parameters"]["do-benchmarks"]:
+    if config["analysis-parameters"]["do-benchmarks"] == True:
         print("[*] Starting fastqc benchmarks...")
         # Attempt to call on fastqc
         try:
@@ -67,10 +67,10 @@ def main():
                 print(f"[!] Quality trimming failed!")
                 print(f"{e}")
     else:
-        print("[*] Skipping sequence pre-processing as per configuration.")
+        print("[*] Skipping processing as per configuration.")
 
     ### Bowtie2 Alignment ###
-    if config["analysis-parameters"]["do-alignment"]:
+    if config["analysis-parameters"]["do-alignment"] == True:
         print("[*] Starting alignment...")
         try:
             # Print bowtie2 version
@@ -89,7 +89,7 @@ def main():
         print("[*] Skipping alignment as per configuration.")
 
     ### Analysis of Aligned Reads ###
-    if config["analysis-parameters"]["do-analysis"]:
+    if config["analysis-parameters"]["do-analysis"] == True:
         print("[*] Starting analysis...")
         try:
             # Print samtools version
