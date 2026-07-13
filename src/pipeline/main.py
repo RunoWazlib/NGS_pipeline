@@ -26,7 +26,7 @@ def main():
         check_config_options(config)
     except ValueError as e:
         print(f"[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
-        print(f"[!] Error: {e}")
+        print(f"Error: {e}")
         return None
 
     # Create output directory if it doesn't exist
@@ -34,7 +34,7 @@ def main():
 
     # Initialize and run scripts based on the configuration
     ### FastQC processing ###
-    if config["analysis-parameters"]["do-benchmarks"] == True:
+    if config["core-parameters"]["do-benchmarks"] == True:
         print("[*] Starting fastqc benchmarks...")
         # Attempt to call on fastqc
         try:
@@ -50,13 +50,13 @@ def main():
         # If initial command failed...
         except subprocess.CalledProcessError:
             print(f"[!] fastqc failed!")
-            print(f"{fastqc_ver.stderr}")
+            print(f"Error: {fastqc_ver.stderr}")
 
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
 
     ### Sequence Pre-processing ###
-    if config["analysis-parameters"]["do-processing"] == True:
+    if config["core-parameters"]["do-processing"] == True:
         print("[*] Starting sequence pre-processing...")
         if config["processing-parameters"]["do-qtrimming"] == True:
             print("[*] Starting quality trimming...")
@@ -65,12 +65,12 @@ def main():
                 pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
             except Exception as e:
                 print(f"[!] Quality trimming failed!")
-                print(f"{e}")
+                print(f"Error: {e}")
     else:
         print("[*] Skipping processing as per configuration.")
 
     ### Bowtie2 Alignment ###
-    if config["analysis-parameters"]["do-alignment"] == True:
+    if config["core-parameters"]["do-alignment"] == True:
         print("[*] Starting alignment...")
         try:
             # Print bowtie2 version
@@ -84,12 +84,12 @@ def main():
 
         except subprocess.CalledProcessError:
             print(f"[!] bowtie2 failed!")
-            print(f"{bowtie2_ver.stderr}")
+            print(f"Error: {bowtie2_ver.stderr}")
     else:
         print("[*] Skipping alignment as per configuration.")
 
     ### Analysis of Aligned Reads ###
-    if config["analysis-parameters"]["do-analysis"] == True:
+    if config["core-parameters"]["do-analysis"] == True:
         print("[*] Starting analysis...")
         try:
             # Print samtools version
@@ -103,7 +103,7 @@ def main():
             pipeline.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
         except subprocess.CalledProcessError:
             print(f"[!] samtools failed!")
-            print(f"{samtools_ver.stderr}")
+            print(f"Error: {samtools_ver.stderr}")
 
     else:
         print("[*] Skipping analysis as per configuration.")

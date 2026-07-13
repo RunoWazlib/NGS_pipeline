@@ -17,16 +17,16 @@
     // Always specify the output directory where the results of the analysis will be saved.
     "output-directory": "path/to/output/directory",
 
-    // The analysis-parameters section contains boolean flags that indicate which steps of the analysis pipeline should be performed.
+    // The core-parameters section contains boolean flags that indicate which steps of the pipeline should be performed.
+    "core-parameters": {
+       "do-benchmarks": true,
+       "do-processing": true,
+       "do-alignment": true,
+       "do-analysis": true
+    },
+
+    // The analysis-parameters section contains boolean flags that indicate what analysis should be performed.
     "analysis-parameters": {
-        // do-benchmarks: If true, the pipeline will perform benchmarking of the sequence data by FastQC
-        "do-benchmarks": true,
-        // do-processing: If true, the pipeline will perform quality trimming of the reads
-        "do-processing": true,
-        // do-alignment: If true, the pipeline will perform alignment of the reads to the reference genome 
-        "do-alignment": true,
-        // do-analysis: If true, the pipeline will perform analysis of the aligned reads
-        "do-analysis": true,
         // do-alignment-stats: If true, the pipeline will generate statistics about the alignment
         "do-alignment-stats": true,
         // do-alignment-visualization: If true, the pipeline will generate a visualization of the alignment

@@ -32,11 +32,13 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
             "R1": r1_files.get(sample),
             "R2": r2_files.get(sample)
         },
-        "analysis-parameters": {
+        "core-parameters": {
             "do-benchmarks": True,
             "do-processing": True,
             "do-alignment": True,
-            "do-analysis": True,
+            "do-analysis": True
+        },
+        "analysis-parameters": {
             "do-alignment-stats": True,
             "do-alignment-visualization": True,
             "do-alignment-score-plot": True,
@@ -73,11 +75,13 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
             "merged-mode": {
                 "R1": str(f)
             },
-            "analysis-parameters": {
+            "core-parameters": {
                 "do-benchmarks": True,
                 "do-processing": True,
                 "do-alignment": True,
-                "do-analysis": True,
+                "do-analysis": True
+            },
+            "analysis-parameters": {
                 "do-alignment-stats": True,
                 "do-alignment-visualization": True,
                 "do-alignment-score-plot": True,

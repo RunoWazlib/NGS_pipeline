@@ -144,7 +144,7 @@ class TestBasicInitialization:
         
         # Create a temporary config file with an output directory
         config_data = make_config_data
-        config_data["analysis-parameters"] = {
+        config_data["core-parameters"] = {
             "do-benchmarks": False,
             "do-processing": False,
             "do-alignment": False,
@@ -172,7 +172,7 @@ class TestBasicInitialization:
         
         # Create a temporary config file with all flags set to False
         config_data = make_config_data
-        config_data["analysis-parameters"] = {
+        config_data["core-parameters"] = {
             "do-benchmarks": False,
             "do-processing": False,
             "do-alignment": False,
@@ -309,21 +309,21 @@ class TestBadConfigs:
         assert "[!] Merged file not found" in str(e_info.value)
 
     def test_missing_opts(self, make_config_data):
-        """This tests that ValueError is thrown when config data does not have any "analysis-parameters" specified
+        """This tests that ValueError is thrown when config data does not have any "core-parameters" specified
         """
         config_data = make_config_data
-        # make_config_data fixture doesn't include analysis-parameters
+        # make_config_data fixture doesn't include core-parameters
         with pytest.raises(ValueError) as e_info:
             check_config_options(config_data)
 
-        assert "[!] No analysis parameters specified" in str(e_info.value)
+        assert "[!] No core parameters specified" in str(e_info.value)
 
     def test_invalid_opts(self, make_config_data):
-        """This tests that ValueError is thrown when config data has invalid "analysis-parameters"
+        """This tests that ValueError is thrown when config data has invalid "core-parameters"
         """
         config_data = make_config_data
-        # Add invalid analysis-parameters
-        config_data["analysis-parameters"] = {
+        # Add invalid core-parameters
+        config_data["core-parameters"] = {
             "do-benchmarks": "foobar",  # Invalid, should be boolean
             "do-processing": False,
             "do-alignment": False,
@@ -345,7 +345,7 @@ class TestBasicProcessing:
         """
         # Make config data for this test
         config_data = make_config_data
-        config_data["analysis-parameters"] = {
+        config_data["core-parameters"] = {
             "do-benchmarks": True,
             "do-processing": False,
             "do-alignment": False,
@@ -371,6 +371,8 @@ class TestBasicProcessing:
         assert Path(f"{target_output_dir}/sample1_R1_fastqc").is_relative_to(target_output_dir)
         # Check fastqc unzip has data file
         assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").parent == Path(f"{target_output_dir}/sample1_R1_fastqc")
+
+    #TODO - Add processing tests for q-trimming
 
 class TestBasicAlignment:
     def test_good_reference(self, make_config_data):
@@ -434,7 +436,7 @@ class TestBasicAlignment:
         """
          # Make config data for this test
         config_data = make_config_data
-        config_data["analysis-parameters"] = {
+        config_data["core-parameters"] = {
             "do-benchmarks": False,
             "do-processing": False,
             "do-alignment": True,
@@ -467,11 +469,13 @@ class TestBasicAnalysis:
             tmp_path (_type_): pytest temporary directory fixture - acts as launch directory for the test
         """
         config_data = make_config_data
-        config_data["analysis-parameters"] = {
+        config_data["core-parameters"] = {
             "do-benchmarks": False,
             "do-processing": False,
             "do-alignment": False,
-            "do-analysis": True,
+            "do-analysis": True
+        }
+        config_data["analysis-parameters"] = {
             "do-alignment-stats": True,
             "do-alignment-visualization":True,
             "do-alignment-score-plot":True,
