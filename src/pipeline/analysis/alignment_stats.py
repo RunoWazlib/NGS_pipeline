@@ -5,7 +5,7 @@ def generate_alignment_stats(aligned_bam_path, output_directory):
     # Generate alignment statistics using samtools flagstat and samtools stat
     command = f"samtools flagstat {aligned_bam_path} > {output_directory}/alignment_stats_summary.txt"
     subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-    
+
     # Generate in-depth alignment statistics using samtools stat
     stats_file = f"{output_directory}/full_alignment_stats.txt"
     command = f"samtools stat {aligned_bam_path} > {stats_file}"
@@ -26,10 +26,9 @@ def generate_alignment_stats(aligned_bam_path, output_directory):
     }
 
     # Open all target files at once
-    out_files = {
-        prefix: open(f"{output_directory}/{filename}", "w")
-        for prefix, filename in prefix_mapping.items()
-    }
+    out_files = {}
+    for prefix, filename in prefix_mapping.items():
+        out_files[prefix] = open(f"{output_directory}/{filename}", "w")
 
     # Iter over the stats file and write to the appropriate output files based on the prefix
     with open(stats_file, "r") as f:
