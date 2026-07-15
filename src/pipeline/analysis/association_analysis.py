@@ -190,9 +190,9 @@ class ReadAlignment:
             self.chi_squares[positions] = chi_square
         return self.chi_squares
     
-def main( reference_file, output_directory):
+def main(reference_file, aligned_bam_file, output_directory):
     # Create an instance of the ReadAlignment class
-    read_alignment = ReadAlignment(f"{output_directory}/aligned_reads.bam", reference_file, output_directory)
+    read_alignment = ReadAlignment(aligned_bam_file, reference_file, output_directory)
     # Get nucleotide sequences from aligned BAM file and reference file
     read_alignment.get_nucleotide_sequences()
     # Perform statistical association analysis on aligned reads

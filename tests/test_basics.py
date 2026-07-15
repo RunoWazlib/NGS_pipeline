@@ -11,7 +11,7 @@ def make_config_data(tmp_path):
     """
     Fixture to create a successful configuration file for testing purposes. Does not include analysis-parameters, which are added in the individual tests as needed.
     """
-    # pre-create output dir for aligned_reads.bam
+    # Pre-create output dir for aligned_reads.bam
     subprocess.run(["mkdir", "-p",f"{tmp_path}/output"])
     # Copy necessary test files to the temporary directory
     source_dir = f"{Path(__file__).parent}/test_data"

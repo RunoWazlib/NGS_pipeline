@@ -1,21 +1,27 @@
-import subprocess
+import subprocess, shutil
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 def generate_mpileup(aligned_bam_path, reference_fasta_path, output_directory):
     # Generate new index for the reference fasta file for samtools mpileup if it doesn't exist
     try:
-        with open(f"{output_directory}/ref_lib/{reference_fasta_path.split('/')[-1]}.fai", 'r') as f:
-            print(f"[*] Reference fasta index found for samtools mpileup, skipping index generation.")
-            pass
+        open(f"{Path(output_directory).parent}/ref_lib/{reference_fasta_path.split('/')[-1]}.fai", 'r')
+        print(f"[*] Reference fasta index found for samtools mpileup, skipping index generation.")
+        pass
     except FileNotFoundError:
         print("[!] Reference fasta index not found for samtools mpileup, generating index...")
-        command = f"samtools faidx {reference_fasta_path} && mv {reference_fasta_path}.fai {output_directory}/ref_lib/"
+        command = f"samtools faidx {reference_fasta_path}"
         subprocess.run(command, shell=True, check=True)
-    
+        
     # Generate mpileup file using samtools mpileup
-    command = f"samtools mpileup -f {reference_fasta_path} -d 500000 {aligned_bam_path} > {output_directory}/alignment/{aligned_bam_path.split('/')[-1]}_mpileup.txt"
-    subprocess.run(command, shell=True, check=True)
-    return f"{output_directory}/alignment/{aligned_bam_path.split('/')[-1]}_mpileup.txt"
+    command = f"samtools mpileup -f {reference_fasta_path} -d 500000 {aligned_bam_path} > {output_directory}/{aligned_bam_path.split('/')[-1]}_mpileup.txt"
+    subprocess.run(command, shell=True)
+
+    # Move this new index into the "output/ref_lib/"
+    # TODO - diagnose why we can't move this file around before mpileup is done; maybe move the unindexed file in here too and point to ref_lib during mpileup
+    shutil.move(Path(f"{reference_fasta_path}.fai"), Path(f"{Path(output_directory).parent}/ref_lib/ref.fai"))
+    
+    return f"{output_directory}/{aligned_bam_path.split('/')[-1]}_mpileup.txt"
     
 def mpileup_cleaner(read_bases):
     # This function processes the mpileup file to remove read starts
@@ -86,6 +92,7 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                 for line in f:
                     # Parse the mpileup line to extract relevant information
                     fields = line.strip().split('\t')
+                    print(fields)
                     pos = fields[1]
                     ref_base = fields[2]
                     depth = fields[3]
@@ -95,7 +102,7 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                     cleaned_read_bases = mpileup_cleaner(read_bases)
                     # Convert cleaned read bases exact base calls for counting
                     substituted_bases = cleaned_read_bases.replace('.', ref_base).replace(',', ref_base.lower())
-                    
+                    print(substituted_bases)
                     # Count the occurrences of each base and indel symbol in the cleaned read bases
                     base_counts = {
                         'A': substituted_bases.count('A') + substituted_bases.count('a'),
@@ -107,9 +114,14 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                     }
                     # Convert counts to percentages
                     nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
-                    base_percentages = {base: (count / nt_count) * 100 for base, count in base_counts.items()}
-                    # Calculate percent identical to reference
-                    percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                    try:
+                        base_percentages = {base: (count / nt_count) * 100 for base, count in base_counts.items()}
+                        # Calculate percent identical to reference
+                        percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                    except ZeroDivisionError:
+                        base_percentages = {"A":0,"C":0,"G":0,"T":0,"+":0,"-":0}
+                        percent_identical = 0.00
+
                     # Output the analysis results for this position
                     out_f.write(f"{pos}\t{percent_identical:.2f}%\t{ref_base}\t{base_percentages['A']:.2f}%\t{base_percentages['C']:.2f}%\t{base_percentages['G']:.2f}%\t{base_percentages['T']:.2f}%\t{base_percentages['+']:.2f}%\t{base_percentages['-']:.2f}%\t{depth}\n")
 
@@ -144,8 +156,11 @@ def generate_mpileup_simple_analysis(mpileup_file_path, output_directory):
                 }
                 # Convert counts to percentages
                 nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
-                # Calculate percent identical to reference
-                percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                try:
+                    # Calculate percent identical to reference
+                    percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                except ZeroDivisionError:
+                    percent_identical = 0.00
                 # Output the analysis results for this position
                 out_f.write(f"{pos}\t{percent_identical:.2f}%\t{ref_base}\t{depth}\n")
 
@@ -177,8 +192,11 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
             }
             # Convert counts to percentages
             nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
-            # Calculate percent identical to reference
-            percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+            try:
+                # Calculate percent identical to reference
+                percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+            except ZeroDivisionError:
+                percent_identical = 0.00
             output_data.append((pos, percent_identical, base_counts['-'], base_counts['+'], depth))
     
     # Separate the output data into lists for plotting

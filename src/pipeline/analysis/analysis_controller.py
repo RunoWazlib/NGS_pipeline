@@ -48,7 +48,7 @@ def main(analysis_params, reference_fasta_path, output_directory):
         print("[*] Generating association analysis...")
         # Make sub-output directory - no error/overwrite if it already exists
         subprocess.run(["mkdir","-p",f"{output_directory}/associations"])
-        association_analysis.main(reference_fasta_path, f"{output_directory}/associations")
+        association_analysis.main(reference_fasta_path, f"{output_directory}/aligned_reads.bam", f"{output_directory}/associations")
 
     # Track the time taken for analysis
     end_time = time.perf_counter()

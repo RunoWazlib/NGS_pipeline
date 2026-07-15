@@ -26,7 +26,7 @@ def main():
         check_config_options(config)
     except ValueError as e:
         print(f"[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
-        print(f"Error: {e}")
+        print(f"\t{e}")
         return None
 
     # Create output directory if it doesn't exist
