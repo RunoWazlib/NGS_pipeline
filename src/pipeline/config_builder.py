@@ -46,6 +46,7 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
             "do-mpileup-fullanalysis": True,
             "do-mpileup-simpleanalysis": True,
             "do-mpileup-visualization": True,
+            "do-indel-analysis": True,
             "do-association-analysis": True
         },
         "processing-parameters": {
@@ -89,6 +90,7 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
                 "do-mpileup-fullanalysis": True,
                 "do-mpileup-simpleanalysis": True,
                 "do-mpileup-visualization": True,
+                "do-indel-analysis": True,
                 "do-association-analysis": True
             },
             "processing-parameters": {

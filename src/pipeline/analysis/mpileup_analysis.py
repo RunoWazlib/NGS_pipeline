@@ -40,7 +40,7 @@ def mpileup_cleaner(read_bases):
             i += 1
             continue
         
-        # Skip Insertions and Deletions (indicated by '+' or '-' followed by the length of the indel and the inserted/deleted bases)
+        # Skip Insertions (indicated by '+' followed by the length of the indel and the inserted/deleted bases)
         if char == '+':
             i += 1
             length_str = ""
@@ -85,24 +85,22 @@ def mpileup_cleaner(read_bases):
 def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
     # Write a header to output file for the full mpileup analysis
     with open(f"{output_directory}/Full_analysis.txt", 'w') as out_f:
-        out_f.write("Position\tPercent_Identical\tReference_Base\tPercent_A\tPercent_C\tPercent_G\tPercent_T\tPercent_Insertions\tPercent_Deletions\tDepth\n")
+        out_f.write("Position\tRate_Identical\tReference_Base\tRate_A\tRate_C\tRate_G\tRate_T\tRate_Insertion\tRate_Deletion\tMutation_Rate\tDepth\n")
 
         # Generate a full analysis of the mpileup file, including percent identical to reference, base composition, and indel frequencies at each position
         with open(mpileup_file_path, 'r') as f:
                 for line in f:
                     # Parse the mpileup line to extract relevant information
                     fields = line.strip().split('\t')
-                    print(fields)
                     pos = fields[1]
                     ref_base = fields[2]
-                    depth = fields[3]
+                    depth = int(fields[3])
                     read_bases = fields[4]
                     
                     # Clean the read bases to remove read starts, ends, and indel data beyond their presence
                     cleaned_read_bases = mpileup_cleaner(read_bases)
                     # Convert cleaned read bases exact base calls for counting
                     substituted_bases = cleaned_read_bases.replace('.', ref_base).replace(',', ref_base.lower())
-                    print(substituted_bases)
                     # Count the occurrences of each base and indel symbol in the cleaned read bases
                     base_counts = {
                         'A': substituted_bases.count('A') + substituted_bases.count('a'),
@@ -112,23 +110,31 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                         '+': substituted_bases.count('+'),  # Count insertions
                         '-': substituted_bases.count('-')   # Count deletions
                     }
-                    # Convert counts to percentages
-                    nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
+                    # Normalize by depth: read coverage / position
                     try:
-                        base_percentages = {base: (count / nt_count) * 100 for base, count in base_counts.items()}
-                        # Calculate percent identical to reference
-                        percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                        base_rates = {base: (count / depth) for base, count in base_counts.items()}
+                        
+                        # count calls identical to reference
+                        percent_identical = (base_counts[ref_base.upper()] / depth) if ref_base.upper() in base_counts else 0
+                        
+                        # Sum mismatch + insertion + deletion counts (anything not reference base), then normalize by depth
+                        # Since these mutations are not mutually exclusive in a read, this is not a mutation frequency (proportion of mutant reads / coverage) - this is a per position event rate (mutant event / coverage)
+                        # This mutation rate must be <= 2 since each position can at maximum have a mismatch and an indel (either insertion or deletion) per read
+                        # in essence this is averaging the mutation count of every read at every position by the coverage of that position
+                        mutation_rate = (sum(base_counts[base] for base in base_counts.keys() if base != ref_base.upper()) / depth)
+                    # If there's no depth, we don't know anything!
                     except ZeroDivisionError:
-                        base_percentages = {"A":0,"C":0,"G":0,"T":0,"+":0,"-":0}
-                        percent_identical = 0.00
+                        base_rates = {"A":0,"C":0,"G":0,"T":0,"+":0,"-":0}
+                        percent_identical = 0
+                        mutation_rate = 0
 
                     # Output the analysis results for this position
-                    out_f.write(f"{pos}\t{percent_identical:.2f}%\t{ref_base}\t{base_percentages['A']:.2f}%\t{base_percentages['C']:.2f}%\t{base_percentages['G']:.2f}%\t{base_percentages['T']:.2f}%\t{base_percentages['+']:.2f}%\t{base_percentages['-']:.2f}%\t{depth}\n")
+                    out_f.write(f"{pos}\t{percent_identical:.2f}\t{ref_base}\t{base_rates['A']:.2f}\t{base_rates['C']:.2f}\t{base_rates['G']:.2f}\t{base_rates['T']:.2f}\t{base_rates['+']:.2f}\t{base_rates['-']:.2f}\t{mutation_rate:.2f}\t{depth}\n")
 
 def generate_mpileup_simple_analysis(mpileup_file_path, output_directory):
     # Write a header to output file for the simple mpileup analysis
     with open(f"{output_directory}/Simple_analysis.txt", 'w') as out_f:
-        out_f.write("Position\tPercent_Identical\tReference_Base\tDepth\n")
+        out_f.write("Position\tRate_Identical\tReference_Base\tDepth\n")
 
         # Generate a simple analysis of the mpileup file, including only percent identical to reference and depth at each position
         with open(mpileup_file_path, 'r') as f:
@@ -137,7 +143,7 @@ def generate_mpileup_simple_analysis(mpileup_file_path, output_directory):
                 fields = line.strip().split('\t')
                 pos = fields[1]
                 ref_base = fields[2]
-                depth = fields[3]
+                depth = int(fields[3])
                 read_bases = fields[4]
                 
                 # Clean the read bases to remove read starts, ends, and indel data beyond their presence
@@ -155,10 +161,9 @@ def generate_mpileup_simple_analysis(mpileup_file_path, output_directory):
                     '-': substituted_bases.count('-')   # Count deletions
                 }
                 # Convert counts to percentages
-                nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
                 try:
                     # Calculate percent identical to reference
-                    percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                    percent_identical = base_counts[ref_base.upper()] / depth if ref_base.upper() in base_counts else 0
                 except ZeroDivisionError:
                     percent_identical = 0.00
                 # Output the analysis results for this position
@@ -173,7 +178,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
             fields = line.strip().split('\t')
             pos = fields[1]
             ref_base = fields[2]
-            depth = fields[3]
+            depth = int(fields[3])
             read_bases = fields[4]
             
             # Clean the read bases to remove read starts, ends, and indel data beyond their presence
@@ -190,60 +195,127 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
                 '+': substituted_bases.count('+'),  # Count insertions
                 '-': substituted_bases.count('-')   # Count deletions
             }
-            # Convert counts to percentages
-            nt_count = sum(base_counts[base] for base in ['A', 'C', 'G', 'T'])
+            # Normalize by depth: read coverage / position
             try:
-                # Calculate percent identical to reference
-                percent_identical = base_counts[ref_base.upper()] / nt_count * 100 if ref_base.upper() in base_counts else 0
+                base_rates = {base: (count / depth) for base, count in base_counts.items()}
+                
+                # count calls identical to reference
+                rate_identical = (base_counts[ref_base.upper()] / depth) if ref_base.upper() in base_counts else 0
+                
+                # Sum mismatch + insertion + deletion counts (anything not reference base), then normalize by depth
+                # Since these mutations are not mutually exclusive in a read, this is not a mutation frequency (proportion of mutant reads / coverage) - this is a per position event rate (mutant event / coverage)
+                # This mutation rate must be <= 2 since each position can at maximum have a mismatch and an indel (either insertion or deletion) per read
+                # in essence this is averaging the mutation count of every read at every position by the coverage of that position
+                mutation_rate = (sum(base_counts[base] for base in base_counts.keys() if base != ref_base.upper()) / depth)
+            # If there's no depth, we don't know anything!
             except ZeroDivisionError:
-                percent_identical = 0.00
-            output_data.append((pos, percent_identical, base_counts['-'], base_counts['+'], depth))
+                base_rates = {"A":0,"C":0,"G":0,"T":0,"+":0,"-":0}
+                rate_identical = 0
+                mutation_rate = 0
+            # Append output to list
+            output_data.append((pos, rate_identical, mutation_rate, base_rates['-'], base_rates['+'], depth))
     
     # Separate the output data into lists for plotting
     pos = [int(data[0]) for data in output_data]
-    percent_identical = [data[1] for data in output_data]
-    percent_mutation = [100 - data[1] for data in output_data]
+    rate_identical = [data[1] for data in output_data]
+    mutation_rate = [100 - data[1] for data in output_data]
     indel_deletions = [data[2] for data in output_data]
     indel_insertions = [data[3] for data in output_data]
     depth = [int(data[4]) for data in output_data]
 
     # Generate and save the percent identical plot
-    plt.plot(pos, percent_identical, color='blue')
+    plt.plot(pos, rate_identical, color='blue')
     plt.title('Percent Identical to Reference Across Positions')
     plt.xlabel('Position')
-    plt.ylabel('Percent Identical (%)')
+    plt.ylabel('Rate Identical (identical base per read)')
     plt.xlim(0, max(pos))
     plt.ylim(0, 100)
     plt.tight_layout()
-    plt.savefig(f"{output_directory}/Percent_identical_plot.png")
+    plt.savefig(f"{output_directory}/Rate_identical_plot.png")
     plt.clf()
     # Generate and save the percent mutation plot
-    plt.plot(pos, percent_mutation, color='red')
+    plt.plot(pos, mutation_rate, color='red')
     plt.title('Percent Mutation from Reference Across Positions')
     plt.xlabel('Position')
     plt.ylabel('Percent Mutation (%)')
     plt.xlim(0, max(pos))
     plt.ylim(0, 100)
     plt.tight_layout()
-    plt.savefig(f"{output_directory}/Percent_mutation_plot.png")
+    plt.savefig(f"{output_directory}/Rate_mutation_plot.png")
     plt.clf()
     # Generate and save the indel frequency plot
     plt.plot(pos, indel_insertions, color='green', label='Insertions')
     plt.plot(pos, indel_deletions, color='orange', label='Deletions')
-    plt.title('Indel Frequencies Across Positions')
+    plt.title('Indel Rates Across Positions')
     plt.xlabel('Position')
     plt.ylabel('Indel Count')
     plt.xlim(0, max(pos))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"{output_directory}/Indel_frequencies_plot.png")
+    plt.savefig(f"{output_directory}/Indel_rates_plot.png")
     plt.clf()
     # Generate and save the sequencing depth plot
     plt.plot(pos, depth, color='purple')
-    plt.title('Sequencing Depth Across Positions')
+    plt.title('Sequencing Coverage Across Positions')
     plt.xlabel('Position')
     plt.ylabel('Depth')
     plt.xlim(0, max(pos))
     plt.tight_layout()
     plt.savefig(f"{output_directory}/Depth_plot.png")
     plt.clf()
+
+def generate_indel_analysis(mpileup_file_path, output_directory):
+    with open(f"{output_directory}/Indel_analysis.txt", "w") as out_f:
+        # Read in mpileup
+        with open(mpileup_file_path, "r") as in_f:
+            for line in in_f:
+                # Parse mpileup for indels
+                fields = line.strip().split('\t')
+                pos = fields[1]
+                ref_base = fields[2]
+                read_bases = fields[4]
+
+                # Catch indels and mismatches
+                i = 0
+                n = len(read_bases)
+                out_f.write(f"Position: {pos}\n")
+                while i < n:
+                    char = read_bases[i]
+                    # Found insertion
+                    if char == "+":
+                        i += 1
+                        # Indel length is always the first term after callout
+                        indel_length = int(read_bases[i])
+                        indel = ""
+                        # Read indel
+                        i += 1
+                        for indel_char in range(i, i+indel_length):
+                            indel += read_bases[indel_char]
+                        # Write indel to output file
+                        out_f.write(f"[+] Insertion\t+{indel_length}\t{indel}\n")
+                        # Resume reading
+                        i += indel_length
+                    
+                    # Found deletion
+                    elif char == "-":
+                        i += 1
+                        # Indel length is always the first term after callout
+                        indel_length = int(read_bases[i])
+                        indel = ""
+                        # Read indel
+                        i += 1
+                        for indel_char in range(i, i+indel_length):
+                            indel += read_bases[indel_char]
+                        # Write indel to output file
+                        out_f.write(f"[-] Deletion\t-{indel_length}\t{indel}\n")
+                        # Resume reading
+                        i += indel_length
+                    
+                    # Found mismatch
+                    elif char == any(["a","A","c","C","g","G","t","T"]) and char != ref_base:
+                        # Write mismatch to output file
+                        out_f.write(f"[!] Mismatch\t{char} != {ref_base}\n")
+                        # Since mismatches are only a single character, we don't need to jump further forward, let loop continue as written
+
+                    # Keep going!
+                    i += 1

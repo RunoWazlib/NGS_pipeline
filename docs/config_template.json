@@ -41,6 +41,8 @@
         "do-mpileup-simpleanalysis": true,
         // do-mpileup-visualization: If true, the pipeline will generate a visualization of the whole mpileup
         "do-mpileup-visualization": true,
+        // do-indel-analysis: If true, the pipeline will output the found indel sequences per position based on mpileup
+        "do-indel-analysis": true,
         // do-association-analysis: If true, the pipeline will perform association analysis on the aligned reads
         "do-association-analysis": true
     },

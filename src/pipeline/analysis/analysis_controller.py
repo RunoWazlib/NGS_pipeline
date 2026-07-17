@@ -42,6 +42,8 @@ def main(analysis_params, reference_fasta_path, output_directory):
             mpileup_analysis.generate_mpileup_simple_analysis(mpileup_file, f"{output_directory}/alignment/")
         if analysis_params.get("do-mpileup-visualization", True):
             mpileup_analysis.generate_mpileup_visualization(mpileup_file, f"{output_directory}/alignment")
+        if analysis_params.get("do-indel-analysis", True):
+            mpileup_analysis.generate_indel_analysis(mpileup_file, f"{output_directory}/alignment")
     
     # Association analysis compares all mutation rates for full read sequences for correlation - indicates tertiary interactions
     if analysis_params.get("do-association-analysis", True):
