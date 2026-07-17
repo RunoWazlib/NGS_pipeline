@@ -2,6 +2,8 @@ import pytest, json, subprocess, shutil
 from pathlib import Path
 
 from pipeline.analysis.alignment_stats import generate_alignment_stats, generate_alignment_score_plot
+from pipeline.analysis.alignment_analysis import generate_alignment_visualization
+from pipeline.analysis.mpileup_analysis import generate_mpileup, mpileup_cleaner, generate_mpileup_full_analysis, generate_mpileup_simple_analysis, generate_mpileup_visualization, generate_indel_analysis
 
 @pytest.fixture
 def make_config_data(tmp_path):
@@ -64,8 +66,161 @@ class TestAnalysisFunctions:
                 assert False
         print(f"Alignment stat files: {alignment_stat_files}")
         assert len(alignment_stat_files) == 11
-    # TODO - Add the other analysis functions
 
+    def test_alignment_score_plot_func(self, make_config_data, tmp_path):
+        """This test validates the alignment_score_plot generator function
+
+        Args:
+            make_config_data (_type_): pytest fixture - generates partial config data that most functional tests have / typical use-case
+            tmp_path (_type_): pytest temporary directory fixture - acts as "output directory" for the test
+        """
+        # Create "alignment_stats" dir for output
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment_stats"], check=True)
+        generate_alignment_score_plot(f"{tmp_path}/output/aligned_reads.bam", f"{tmp_path}/output/alignment_stats")
+
+        # func generates a txt file of scores
+        target = f"{tmp_path}/output/alignment_stats/alignment_scores.txt"
+        assert Path(target).exists()
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) > 0:
+                    assert True
+                else:
+                    assert False
+        except FileNotFoundError:
+            assert False
+        # func generates a png image
+        assert Path(f"{tmp_path}/output/alignment_stats/alignment_score_plot.png").exists()
+
+    def test_alignment_visualization_func(self, make_config_data, tmp_path):
+        """This test validates the alignment_stats generator function
+
+        Args:
+            make_config_data (_type_): pytest fixture - generates partial config data that most functional tests have / typical use-case
+            tmp_path (_type_): pytest temporary directory fixture - acts as "output directory" for the test
+        """
+        # Get config data for ref and output locations
+        config_data = make_config_data
+        # Run unit
+        generate_alignment_visualization(f"{tmp_path}/output/aligned_reads.bam", config_data["reference-fasta"],config_data["output-directory"])
+
+        # func generates an "all_reads.txt" file
+        assert Path(f"{tmp_path}/output/all_reads.txt").exists()
+        # "all_reads.txt" is not empty
+        target = f"{tmp_path}/output/all_reads.txt"
+        assert Path(target).exists()
+        # file is not empty
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) < 0:
+                    assert False
+                else:
+                    assert True
+        except FileNotFoundError:
+            assert False
+        # func generates a "global_alignment_matrix.txt" file
+        assert Path(f"{tmp_path}/output/global_alignment_matrix.txt").exists()
+        # "global_alignment_matrix.txt" is not empty
+        target = f"{tmp_path}/output/global_alignment_matrix.txt"
+        assert Path(target).exists()
+        # file is not empty
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) < 0:
+                    assert False
+                else:
+                    assert True
+        except FileNotFoundError:
+            assert False
+
+    def test_mpileup_gen_func_no_fai(self, make_config_data, tmp_path):
+        # Create "ref_lib" dir for ref.fai and "alignment" for output
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/ref_lib/"], check=True)
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # unit test
+        result = generate_mpileup(f"{tmp_path}/output/aligned_reads.bam", config_data["reference-fasta"], f"{config_data["output-directory"]}/alignment/")
+
+        # .fai file should end up in output/ref_lib/
+        assert Path(f"{tmp_path}/output/ref_lib/ref.fai").exists()
+        # mpileup.txt should end up in output/
+        assert Path(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt").exists()
+        # func should return location of mpileup
+        assert Path(result) == Path(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt")
+
+    def test_mpileup_gen_func_fai(self, make_config_data, tmp_path):
+        # Create "ref_lib" dir for ref.fai and "alignment" for output
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/ref_lib/"], check=True)
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # Create "reference.fasta.fai" file
+        subprocess.run(["samtools","faidx",config_data["reference-fasta"]], check=True)
+        # unit test
+        result = generate_mpileup(f"{tmp_path}/output/aligned_reads.bam", config_data["reference-fasta"], f"{config_data["output-directory"]}/alignment/")
+
+        # mpileup.txt should end up in output/
+        assert Path(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt").exists()
+        # func should return location of mpileup
+        assert Path(result) == Path(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt")
+
+    def test_mpileup_full_analysis(self, make_config_data, tmp_path):
+        # Create "alignment" output directory
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # Make mpileup file
+        subprocess.run(f"samtools faidx {config_data["reference-fasta"]}", shell=True)
+        subprocess.run(f"samtools mpileup -f {config_data["reference-fasta"]} -d 500000 {tmp_path}/output/aligned_reads.bam > {tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", shell=True)
+        # Unit test
+        generate_mpileup_full_analysis(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", f"{tmp_path}/output/alignment")
+
+        # func generates file
+        target = f"{tmp_path}/output/alignment/Full_analysis.txt"
+        assert Path(target).exists()
+        # file is not empty
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) < 0:
+                    assert False
+                else:
+                    assert True
+        except FileNotFoundError:
+            assert False
+
+    def test_mpileup_simple_analysis(self, make_config_data, tmp_path):
+        # Create "alignment" output directory
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # Make mpileup file
+        subprocess.run(f"samtools faidx {config_data["reference-fasta"]}", shell=True)
+        subprocess.run(f"samtools mpileup -f {config_data["reference-fasta"]} -d 500000 {tmp_path}/output/aligned_reads.bam > {tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", shell=True)
+
+        # Unit test
+        generate_mpileup_simple_analysis(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", f"{tmp_path}/output/alignment")
+
+        # func generates file
+        target = f"{tmp_path}/output/alignment/Simple_analysis.txt"
+        assert Path(target).exists()
+        # file is not empty
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) < 0:
+                    assert False
+                else:
+                    assert True
+        except FileNotFoundError:
+            assert False
+# TODO - add remaining analysis unit tests; mpileup cleaner, mpileup visualization, indel analysis, association analysis
+    def test_mpileup_visualization(self, make_config_data, tmp_path):
+        pass
+
+    def test_mpileup_indel_analysis(self, make_config_data, tmp_path):
+        pass
+
+# TODO - verify end-to-end analysis tests work / need an update
 class TestBasicAnalysisRuns:
     def test_analysis_execution(self, make_config_data, tmp_path):
         """This test verifies that the analysis step is executed when the corresponding flag is set to True in the config file
