@@ -1,7 +1,7 @@
 import subprocess, shutil
 from pathlib import Path
 import matplotlib.pyplot as plt
-
+import matplotlib.ticker as mticker
 def generate_mpileup(aligned_bam_path, reference_fasta_path, output_directory):
     # Generate new index for the reference fasta file for samtools mpileup if it doesn't exist
     try:
@@ -229,7 +229,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
     plt.xlabel('Position')
     plt.ylabel('Rate Identical (identical base per read)')
     plt.xlim(0, max(pos))
-    plt.ylim(0, 100)
+    plt.ylim(0, 1)
     plt.tight_layout()
     plt.savefig(f"{output_directory}/Rate_identical_plot.png")
     plt.clf()
@@ -239,7 +239,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
     plt.xlabel('Position')
     plt.ylabel('Mutation rate (mutations per read)')
     plt.xlim(0, max(pos))
-    plt.ylim(0, 100)
+    plt.ylim(0, 2)
     plt.tight_layout()
     plt.savefig(f"{output_directory}/Rate_mutation_plot.png")
     plt.clf()
@@ -251,6 +251,8 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
     plt.ylabel('Indel Rate (indel start per read)')
     plt.xlim(0, max(pos))
     plt.legend()
+    # Plot tick formatting
+    plt.gca().yaxis.set_major_locator(mticker.MaxNLocator(5)) # 5 major ticks maximum
     plt.tight_layout()
     plt.savefig(f"{output_directory}/Indel_rates_plot.png")
     plt.clf()
