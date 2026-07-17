@@ -176,7 +176,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
         for line in f:
             # Parse the mpileup line to extract relevant information
             fields = line.strip().split('\t')
-            pos = fields[1]
+            pos = int(fields[1])
             ref_base = fields[2]
             depth = int(fields[3])
             read_bases = fields[4]
@@ -216,12 +216,12 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
             output_data.append((pos, rate_identical, mutation_rate, base_rates['-'], base_rates['+'], depth))
     
     # Separate the output data into lists for plotting
-    pos = [int(data[0]) for data in output_data]
+    pos = [data[0] for data in output_data]
     rate_identical = [data[1] for data in output_data]
-    mutation_rate = [100 - data[1] for data in output_data]
-    indel_deletions = [data[2] for data in output_data]
-    indel_insertions = [data[3] for data in output_data]
-    depth = [int(data[4]) for data in output_data]
+    mutation_rate = [data[2] for data in output_data]
+    indel_deletions = [data[3] for data in output_data]
+    indel_insertions = [data[4] for data in output_data]
+    depth = [data[5] for data in output_data]
 
     # Generate and save the percent identical plot
     plt.plot(pos, rate_identical, color='blue')
@@ -237,7 +237,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
     plt.plot(pos, mutation_rate, color='red')
     plt.title('Percent Mutation from Reference Across Positions')
     plt.xlabel('Position')
-    plt.ylabel('Percent Mutation (%)')
+    plt.ylabel('Mutation rate (mutations per read)')
     plt.xlim(0, max(pos))
     plt.ylim(0, 100)
     plt.tight_layout()
@@ -248,7 +248,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
     plt.plot(pos, indel_deletions, color='orange', label='Deletions')
     plt.title('Indel Rates Across Positions')
     plt.xlabel('Position')
-    plt.ylabel('Indel Count')
+    plt.ylabel('Indel Rate (indel start per read)')
     plt.xlim(0, max(pos))
     plt.legend()
     plt.tight_layout()
