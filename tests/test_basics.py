@@ -162,7 +162,7 @@ class TestBasicInitialization:
         subprocess.run(command, shell=True, check=True)
         
         # Should create output directory
-        assert Path(f"{tmp_path}/output").is_relative_to(tmp_path)
+        assert Path(f"{tmp_path}/output").is_dir()
     
     def test_config_flags_disabled(self, make_config_data, tmp_path):
         """This test verifies that the flags in the config file are correctly interpreted by ngs_driver
@@ -368,11 +368,11 @@ class TestBasicProcessing:
         # Check fastqc output directory exists
         assert target_output_dir.is_dir()
         # Check fastqc .zip files exist
-        assert Path(f"{target_output_dir}/sample1_R1_fastqc.zip").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc.zip").exists()
         # Check fastqc unzip directory exists
-        assert Path(f"{target_output_dir}/sample1_R1_fastqc").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc").is_dir()
         # Check fastqc unzip has data file
-        assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").parent == Path(f"{target_output_dir}/sample1_R1_fastqc")
+        assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").exists()
 
     #TODO - Add processing tests for q-trimming
 
@@ -391,7 +391,7 @@ class TestBasicAlignment:
         target_output_dir = config_data["output-directory"]
 
         # Should make a ref_lib dir in /output/
-        assert Path(f"{target_output_dir}/ref_lib").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/ref_lib").is_dir()
         # Should make six '.bt2' files in /ref_lib/
         bt2_files = []
         for path in Path(f"{target_output_dir}/ref_lib").glob("*.bt2"):
@@ -417,7 +417,7 @@ class TestBasicAlignment:
         target_output_dir = Path(f"{tmp_path}")
         
         # Should still make a ref_lib dir
-        assert Path(f"{tmp_path}/ref_lib").is_relative_to(target_output_dir)
+        assert Path(f"{tmp_path}/ref_lib").is_dir()
         # Should fail to make files
         bt2_files = []
         for path in Path(f"{target_output_dir}/ref_lib").glob("*.bt2"):
