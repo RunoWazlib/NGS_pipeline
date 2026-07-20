@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ngs-pipeline"
-version = "0.2.0"
-description = "Pipeline for next-generation sequencing analysis"
+version = "2.3.0"
+description = "Next-gen sequencing data analysis package"
 readme = "README.md"
 requires-python = ">=3.13"
 
