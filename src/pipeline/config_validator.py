@@ -55,15 +55,15 @@ def check_config_options(config_data={}):
         
     # Check main analysis parameters are bool
     try:
-        for key in config_data["analysis-parameters"]:
-            if not isinstance(config_data["analysis-parameters"][key], bool):
+        for key in config_data["core-parameters"]:
+            if not isinstance(config_data["core-parameters"][key], bool):
                 raise ValueError(f"[!] Invalid value for '{key}' - must be a boolean (True/False)")
     except KeyError:
-        raise ValueError("[!] No analysis parameters specified")
+        raise ValueError("[!] No core parameters specified")
     
     # Check processing parameters are valid, if processing parameters exist
     try:
-        if config_data["analysis-parameters"]["do-processing"] == True:
+        if config_data["core-parameters"]["do-processing"] == True:
             try:
                 if not isinstance(config_data["processing-parameters"]["do-qtrimming"], bool):
                     raise ValueError("[!] Invalid value for 'do-qtrimming' - must be a boolean (True/False)")
@@ -79,6 +79,5 @@ def check_config_options(config_data={}):
             except KeyError:
                 raise ValueError("[!] No processing parameters specified")
     except KeyError:
-        # Non-bool "do-processing" caught by "main analysis parameters" check above, so we can ignore this KeyError
-        # No processing parameters specified, but this is optional if do-processing is False
-        raise ValueError("[!] 'do-processing' parameter not specified in analysis parameters")
+        # Non-bool "do-processing" caught by "core-parameters" check above, so this is only triggered if "do-processing" is not specified at all
+        raise ValueError("[!] 'do-processing' parameter not specified in core parameters")

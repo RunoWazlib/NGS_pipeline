@@ -28,7 +28,7 @@ def fastq_benchmark_data_merged(reads_path, output_directory):
 def unzip_analysis(directory):
     # Unzip the data analysis yielded from FastQC
     for file in Path(directory).glob("*.zip"):
-        command = f"unzip {file}"
+        command = f"unzip {file} -d {directory}"
         subprocess.run(command, shell=True, check=True)
         
 def main(alignment_mode, reads_path, output_directory):

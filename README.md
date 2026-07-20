@@ -1,3 +1,4 @@
+![Tests](https://github.com/RunoWazlib/NGS_pipeline/actions/workflows/tests.yml/badge.svg)
 # Introduction
 The scripts contained in this directory serve as the source code for our Next-Generation Sequencing (ngs) data analysis pipeline. This analysis will follow these broad steps:
 1. Optionally, trim raw reads to desired length or to bases with desired features (Partially implemented)

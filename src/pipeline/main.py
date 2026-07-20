@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pipeline.processing.fastqc_processing, pipeline.processing.q_trimmer, pipeline.alignment.aligner, pipeline.analysis.analysis, pipeline.analysis.association_analysis
+import pipeline.processing.fastqc_processing, pipeline.processing.q_trimmer, pipeline.alignment.aligner, pipeline.analysis.analysis_controller
 from pipeline.config_validator import check_config_options
 import json, argparse, time, subprocess
 
@@ -26,7 +26,7 @@ def main():
         check_config_options(config)
     except ValueError as e:
         print(f"[!] Invalid config! Hint - use 'config-builder' to generate configuration files")
-        print(f"[!] Error: {e}")
+        print(f"\t{e}")
         return None
 
     # Create output directory if it doesn't exist
@@ -34,77 +34,37 @@ def main():
 
     # Initialize and run scripts based on the configuration
     ### FastQC processing ###
-    if config["analysis-parameters"]["do-benchmarks"] == True:
+    if config["core-parameters"]["do-benchmarks"] == True:
         print("[*] Starting fastqc benchmarks...")
-        # Attempt to call on fastqc
-        try:
-            # Get fastqc version
-            command = f"fastqc --version"
-            fastqc_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-            with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
-                f.write("-"*10+" FastQC "+"-"*10+"\n"+f"{fastqc_ver.stdout}")
-            
-            # Pass parameters to the fastq benchmarks script
-            pipeline.processing.fastqc_processing.main(config["mode"], config[config["mode"]], config["output-directory"])
-
-        # If initial command failed...
-        except subprocess.CalledProcessError:
-            print(f"[!] fastqc failed!")
-            print(f"{fastqc_ver.stderr}")
-
+        # Pass parameters to the fastq benchmarks script
+        pipeline.processing.fastqc_processing.main(config["mode"], config[config["mode"]], config["output-directory"])
     else:
         print("[*] Skipping fastqc benchmarks as per configuration.")
 
     ### Sequence Pre-processing ###
-    if config["analysis-parameters"]["do-processing"] == True:
+    if config["core-parameters"]["do-processing"] == True:
         print("[*] Starting sequence pre-processing...")
         if config["processing-parameters"]["do-qtrimming"] == True:
             print("[*] Starting quality trimming...")
-            try:
-                # Pass parameters to the quality trimming script
-                pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
-            except Exception as e:
-                print(f"[!] Quality trimming failed!")
-                print(f"{e}")
+            # Pass parameters to the quality trimming script
+            pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
+        # TODO - other pre-processing steps should be implemented here
     else:
         print("[*] Skipping processing as per configuration.")
 
     ### Bowtie2 Alignment ###
-    if config["analysis-parameters"]["do-alignment"] == True:
+    if config["core-parameters"]["do-alignment"] == True:
         print("[*] Starting alignment...")
-        try:
-            # Print bowtie2 version
-            command = f"bowtie2 --version"
-            bowtie2_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-            with open(f"{config['output-directory']}/dep_versions.log", "a+") as f:
-                    f.write("-"*10+" Bowtie2 "+"-"*10+"\n"+f"{bowtie2_ver.stdout}")
-
-            # Pass alignment parameters to the aligner script
-            pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
-
-        except subprocess.CalledProcessError:
-            print(f"[!] bowtie2 failed!")
-            print(f"{bowtie2_ver.stderr}")
+        # Pass alignment parameters to the aligner script
+        pipeline.alignment.aligner.main(config["mode"], config["reference-fasta"], config[config["mode"]], config["output-directory"])
     else:
         print("[*] Skipping alignment as per configuration.")
 
     ### Analysis of Aligned Reads ###
-    if config["analysis-parameters"]["do-analysis"] == True:
+    if config["core-parameters"]["do-analysis"] == True:
         print("[*] Starting analysis...")
-        try:
-            # Print samtools version
-            command = f"samtools --version"
-            samtools_ver = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-            with open(f"{config['output-directory']}/dep_versions.log","a+") as f:
-                f.write("-"*10+" samtools "+"-"*10+"\n"+f"{samtools_ver.stdout}")
-            
-            # Pass analysis parameters to the analysis script
-            pipeline.analysis.analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
-            pipeline.analysis.association_analysis.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
-        except subprocess.CalledProcessError:
-            print(f"[!] samtools failed!")
-            print(f"{samtools_ver.stderr}")
-
+        # Pass analysis parameters to the analysis script
+        pipeline.analysis.analysis_controller.main(config["analysis-parameters"], config["reference-fasta"], config["output-directory"])
     else:
         print("[*] Skipping analysis as per configuration.")
 

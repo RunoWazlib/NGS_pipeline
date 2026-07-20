@@ -190,36 +190,28 @@ class ReadAlignment:
             self.chi_squares[positions] = chi_square
         return self.chi_squares
     
-def main(analysis_params, reference_file, output_directory):
-    # Track the time taken for association analysis
-    start_time = time.perf_counter()
-    # Does config include association analysis?
-    if analysis_params.get("do-association-analysis", True):
-        print("[*] Generating association analysis...")
-        # Create an instance of the ReadAlignment class
-        read_alignment = ReadAlignment(f"{output_directory}/aligned_reads.bam", reference_file, output_directory)
-        # Get nucleotide sequences from aligned BAM file and reference file
-        read_alignment.get_nucleotide_sequences()
-        # Perform statistical association analysis on aligned reads
-        chi_square_results = read_alignment.statistical_association_analysis()
-        # Output results to file
-        with open(f"{output_directory}/association_analysis_summary.txt", "w") as f:
-            f.write(f"Total Reads: {read_alignment.total_reads_count}\n")
-            f.write(f"Aligned Reads: {read_alignment.aligned_reads_count}\n")
-            f.write(f"Full Length Reads: {len(read_alignment.mutation_map)}\n")
-            significant_associations = 0
-            for positions, chi_square in chi_square_results.items():
-                if chi_square > 3.841:  # Chi-square threshold for p < 0.05, 1 degree of freedom
-                    f.write(f"Positions {positions}: Chi-Square = {chi_square:.4f}\n")
-                    significant_associations += 1
-            if significant_associations == 0:
-                f.write("No significant associations found (p < 0.05, 1 df).")
+def main(reference_file, aligned_bam_file, output_directory):
+    # Create an instance of the ReadAlignment class
+    read_alignment = ReadAlignment(aligned_bam_file, reference_file, output_directory)
+    # Get nucleotide sequences from aligned BAM file and reference file
+    read_alignment.get_nucleotide_sequences()
+    # Perform statistical association analysis on aligned reads
+    chi_square_results = read_alignment.statistical_association_analysis()
+    # Output results to file
+    with open(f"{output_directory}/association_analysis_summary.txt", "w") as f:
+        f.write(f"Total Reads: {read_alignment.total_reads_count}\n")
+        f.write(f"Aligned Reads: {read_alignment.aligned_reads_count}\n")
+        f.write(f"Full Length Reads: {len(read_alignment.mutation_map)}\n")
+        significant_associations = 0
+        for positions, chi_square in chi_square_results.items():
+            if chi_square > 3.841:  # Chi-square threshold for p < 0.05, 1 degree of freedom
+                f.write(f"Positions {positions}: Chi-Square = {chi_square:.4f}\n")
+                significant_associations += 1
+        if significant_associations == 0:
+            f.write("No significant associations found (p < 0.05, 1 df).")
 
-        # Output full chi-square results to a TSV file   
-        with open(f"{output_directory}/association_analysis_results.tsv", "w") as f:
-            f.write("Position1\tPosition2\tChi-Square\n")
-            for positions, chi_square in chi_square_results.items():
-                f.write(f"{positions[0]}\t{positions[1]}\t{chi_square:.4f}\n")
-    # Print total time taken for association analysis
-    end_time = time.perf_counter()
-    print(f"[-] Association analysis completed in {end_time - start_time:.2f} seconds.")
+    # Output full chi-square results to a TSV file   
+    with open(f"{output_directory}/association_analysis_results.tsv", "w") as f:
+        f.write("Position1\tPosition2\tChi-Square\n")
+        for positions, chi_square in chi_square_results.items():
+            f.write(f"{positions[0]}\t{positions[1]}\t{chi_square:.4f}\n")
