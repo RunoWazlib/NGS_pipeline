@@ -47,7 +47,9 @@ def main():
         if config["processing-parameters"]["do-qtrimming"] == True:
             print("[*] Starting quality trimming...")
             # Pass parameters to the quality trimming script
-            pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
+            trimmed_seqs = pipeline.processing.q_trimmer.main(config["processing-parameters"], config["mode"], config[config["mode"]], config["output-directory"])
+            # Redefine fastq file paths to trimmed files
+            config[config["mode"]] = trimmed_seqs
         # TODO - other pre-processing steps should be implemented here
     else:
         print("[*] Skipping processing as per configuration.")
