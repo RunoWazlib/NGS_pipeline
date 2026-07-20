@@ -4,7 +4,7 @@ from pathlib import Path
 from pipeline.analysis.alignment_stats import generate_alignment_stats, generate_alignment_score_plot
 from pipeline.analysis.alignment_analysis import generate_alignment_visualization
 from pipeline.analysis.mpileup_analysis import generate_mpileup, mpileup_cleaner, generate_mpileup_full_analysis, generate_mpileup_simple_analysis, generate_mpileup_visualization, generate_indel_analysis
-
+from pipeline.analysis.association_analysis import main
 @pytest.fixture
 def make_config_data(tmp_path):
     """
@@ -37,6 +37,7 @@ def make_config_data(tmp_path):
     }
     return config_data
 
+# TODO - make these tests faster by using a fake mpileup file rather than making one for every test
 class TestAnalysisFunctions:
     def test_alignment_stats_func(self, make_config_data, tmp_path):
         """This test validates the alignment_stats generator function
@@ -133,6 +134,17 @@ class TestAnalysisFunctions:
         except FileNotFoundError:
             assert False
 
+    def test_mpileup_cleaner(self):
+        # Unit test
+        test_read = "^Q.....*,,,,,.+4ACGT.-4ACGT$"
+        result = mpileup_cleaner(test_read)
+
+        assert result == ".....,,,,,.+.-"
+        assert result.count(".") == 7
+        assert result.count(",") == 5
+        assert result.count("-") == 1
+        assert result.count("+") == 1
+
     def test_mpileup_gen_func_no_fai(self, make_config_data, tmp_path):
         # Create "ref_lib" dir for ref.fai and "alignment" for output
         subprocess.run(["mkdir","-p",f"{tmp_path}/output/ref_lib/"], check=True)
@@ -213,12 +225,77 @@ class TestAnalysisFunctions:
                     assert True
         except FileNotFoundError:
             assert False
-# TODO - add remaining analysis unit tests; mpileup cleaner, mpileup visualization, indel analysis, association analysis
-    def test_mpileup_visualization(self, make_config_data, tmp_path):
-        pass
 
-    def test_mpileup_indel_analysis(self, make_config_data, tmp_path):
-        pass
+    def test_mpileup_visualization(self, make_config_data, tmp_path):
+        # Create "alignment" output directory
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # Make mpileup file
+        subprocess.run(f"samtools faidx {config_data["reference-fasta"]}", shell=True)
+        subprocess.run(f"samtools mpileup -f {config_data["reference-fasta"]} -d 500000 {tmp_path}/output/aligned_reads.bam > {tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", shell=True)
+
+        # Unit test
+        generate_mpileup_visualization(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", f"{tmp_path}/output/alignment")
+
+        # func generates 5 .png plots
+        target = f"{tmp_path}/output/alignment/"
+        files = []
+        for path in Path(target).glob("*.png"):
+            files.append(path)
+        assert len(files) == 4
+
+    def test_indel_analysis(self, make_config_data, tmp_path):
+        # Create "alignment" output directory
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/alignment/"], check=True)
+        # Get config data
+        config_data = make_config_data
+        # Make mpileup file
+        subprocess.run(f"samtools faidx {config_data["reference-fasta"]}", shell=True)
+        subprocess.run(f"samtools mpileup -f {config_data["reference-fasta"]} -d 500000 {tmp_path}/output/aligned_reads.bam > {tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", shell=True)
+
+        # Unit test
+        generate_indel_analysis(f"{tmp_path}/output/alignment/aligned_reads.bam_mpileup.txt", f"{tmp_path}/output/alignment")
+
+        # func generates file
+        target = f"{tmp_path}/output/alignment/Indel_analysis.txt"
+        assert Path(target).exists()
+        # file is not empty
+        try:
+            with open(target, "r") as f:
+                if len(f.read()) < 0:
+                    assert False
+                else:
+                    assert True
+        except FileNotFoundError:
+            assert False
+
+    # This test takes ~ 1 minute
+    # TODO - make faster test?
+    def test_association_analysis(self, make_config_data, tmp_path):
+        config_data = make_config_data
+        # Create "association" output directory
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/association/"], check=True)
+        # Run main() of association_analysis
+        main(config_data["reference-fasta"],f"{tmp_path}/output/aligned_reads.bam", f"{config_data["output-directory"]}/association")
+
+        # func makes two files
+        target = f"{tmp_path}/output/association"
+        files = []
+        for path in Path(target).iterdir():
+            files.append(path)
+        assert len(files) == 3 # Two outputs + all_reads.txt
+        print(files)
+        # files not empty
+        for file in files:
+            try:
+                with open(file, "r") as f:
+                    if len(f.read()) < 0:
+                        assert False
+                    else:
+                        assert True
+            except FileNotFoundError:
+                assert False
 
 # TODO - verify end-to-end analysis tests work / need an update
 class TestBasicAnalysisRuns:
@@ -250,11 +327,14 @@ class TestBasicAnalysisRuns:
         with open(config_file, "w") as f:
             json.dump(config_data, f)
 
+        # Make a ref_lib directory for mpileup later on
+        subprocess.run(["mkdir","-p",f"{tmp_path}/output/ref_lib/"])
+
         # Run ngs_driver to check that analysis is performed
         command = f"ngs-pipeline --config {config_file}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         target_output_dir = Path(config_data["output-directory"]) # tmp_path/output/
-
+        
         # Main reads in config correct
         assert "[*] Starting analysis..." in result.stdout
         
@@ -262,42 +342,44 @@ class TestBasicAnalysisRuns:
         assert Path(f"{target_output_dir}/alignment_stats").is_dir()
         # samtools flagstat generates a file
         assert Path(f"{target_output_dir}/alignment_stats/alignment_stats_summary.txt").exists()
-        # Make sure the smaller files are generated, should be 11 files in all (1 from flagstat, 10 from stat, 2 from alignment score dist)
+        # Make sure the smaller files are generated, should be 13 files in all (1 from flagstat, 10 from stat, 2 from alignment score dist)
         alignment_stat_files = []
         for path in Path(f"{target_output_dir}/alignment_stats/").iterdir():
             alignment_stat_files.append(path)
-        print(f"Alignment stat files: {alignment_stat_files}")
         assert len(alignment_stat_files) == 13
 
+        # Alignment dir generates correctly
+        assert Path(f"{target_output_dir}/alignment").is_dir()
+        
         # Alignment visualization generates correctly
-        assert Path(f"{target_output_dir}/all_reads.txt").is_relative_to(target_output_dir)
-        assert Path(f"{target_output_dir}/global_alignment_matrix.txt").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/alignment/all_reads.txt").exists()
+        assert Path(f"{target_output_dir}/alignment/global_alignment_matrix.txt").exists()
 
         # Alignment score plot generates correctly
-        assert Path(f"{target_output_dir}/alignment_scores.txt").is_relative_to(target_output_dir)
-        assert Path(f"{target_output_dir}/alignment_score_plot.png").is_relative_to(target_output_dir)
+        assert Path(f"{target_output_dir}/alignment_stats/alignment_scores.txt").exists()
+        assert Path(f"{target_output_dir}/alignment_stats/alignment_score_plot.png").exists()
 
         # mpileup generates correctly
             # mpileup should generate a new reference index for itself
         assert "[!] Reference fasta index not found for samtools mpileup, generating index..." in result.stdout
-            # new referenece index should end up in /output/ref_lib/
-        assert Path(f"{target_output_dir}/ref_lib/reference.fasta.fai").is_relative_to(Path(f"{target_output_dir}/ref_lib/"))
+            # new reference index should end up in /output/ref_lib/
+        assert Path(f"{target_output_dir}/ref_lib/ref.fai").exists()
             # mpileup file ends up in output
-        assert Path(f"{target_output_dir}/aligned_reads.bam_mpileup.txt").is_relative_to(Path(f"{target_output_dir}"))
+        assert Path(f"{target_output_dir}/alignment/aligned_reads.bam_mpileup.txt").exists()
 
         # mpileup is analyzed
             # Full analysis generates
-        assert Path(f"{target_output_dir}/mpileup_full_analysis.txt").is_relative_to(f"{target_output_dir}")
+        assert Path(f"{target_output_dir}/alignment/Full_analysis.txt").exists()
             # Partial analysis generates
-        assert Path(f"{target_output_dir}/mpileup_simple_analysis.txt").is_relative_to(f"{target_output_dir}")
+        assert Path(f"{target_output_dir}/alignment/Simple_analysis.txt").exists()
 
         # mpileup is visualized
-        assert Path(f"{target_output_dir}/mpileup_percent_identical_plot.png")
-        assert Path(f"{target_output_dir}/mpileup_percent_mutation_plot.png")
-        assert Path(f"{target_output_dir}/mpileup_indel_frequencies_plot.png")
-        assert Path(f"{target_output_dir}/mpileup_depth_plot.png")
+        assert Path(f"{target_output_dir}/alignment/Rate_identical_plot.png").exists()
+        assert Path(f"{target_output_dir}/alignment/Rate_mutation_plot.png").exists()
+        assert Path(f"{target_output_dir}/alignment/Indel_rates_plot.png").exists()
+        assert Path(f"{target_output_dir}/alignment/Depth_plot.png").exists()
 
-    # TODO - Add association test once it is dealt with in main:main
-    @pytest.mark.skip(reason="incomplete test")
-    def test_association_analysis(self, make_config_data, tmp_path):
-        pass
+        # Association files generate
+        assert Path(f"{target_output_dir}/associations/association_analysis_results.tsv").exists()
+        assert Path(f"{target_output_dir}/associations/association_analysis_summary.txt").exists()
+        assert Path(f"{target_output_dir}/associations/all_reads.txt").exists()

@@ -195,7 +195,7 @@ def generate_mpileup_visualization(mpileup_file_path, output_directory):
                 '+': substituted_bases.count('+'),  # Count insertions
                 '-': substituted_bases.count('-')   # Count deletions
             }
-            # Normalize by depth: read coverage / position
+            # Normalize by depth: read coverage / position ("*" do contribute to read coverage as it was an opportunity to call a base, but was deleted according to alignment)
             try:
                 base_rates = {base: (count / depth) for base, count in base_counts.items()}
                 
@@ -283,41 +283,58 @@ def generate_indel_analysis(mpileup_file_path, output_directory):
                 out_f.write(f"Position: {pos}\n")
                 while i < n:
                     char = read_bases[i]
-                    # Found insertion
-                    if char == "+":
+                    # Found Insertion (indicated by '+' followed by the length of the indel and the inserted/deleted bases)
+                    if char == '+':
                         i += 1
-                        # Indel length is always the first term after callout
-                        indel_length = int(read_bases[i])
-                        indel = ""
-                        # Read indel
-                        i += 1
-                        for indel_char in range(i, i+indel_length):
-                            indel += read_bases[indel_char]
-                        # Write indel to output file
-                        out_f.write(f"[+] Insertion\t+{indel_length}\t{indel}\n")
-                        # Resume reading
-                        i += indel_length
+                        length_str = ""
+
+                        # Read the length of the indel
+                        while i < n and read_bases[i].isdigit():
+                            length_str += read_bases[i]
+                            i += 1
+                        if length_str:
+                            indel_length = int(length_str)
+                            indel = ""
+                            while i < n and i < i + indel_length:
+                                indel += read_bases[i]
+                                i += 1
+
+                            # Write indel to output file
+                            out_f.write(f"[+] Insertion\t+{indel_length}\t{indel}\n")
+                            # Next base
+                            i += 1
+                        continue
                     
-                    # Found deletion
-                    elif char == "-":
+                    # Deletions
+                    if char == '-':
                         i += 1
-                        # Indel length is always the first term after callout
-                        indel_length = int(read_bases[i])
-                        indel = ""
-                        # Read indel
-                        i += 1
-                        for indel_char in range(i, i+indel_length):
-                            indel += read_bases[indel_char]
-                        # Write indel to output file
-                        out_f.write(f"[-] Deletion\t-{indel_length}\t{indel}\n")
-                        # Resume reading
-                        i += indel_length
+                        length_str = ""
+
+                        # Read the length of the indel
+                        while i < n and read_bases[i].isdigit():
+                            length_str += read_bases[i]
+                            i += 1
+
+                        if length_str:
+                            indel_length = int(length_str)
+                            indel = ""
+                            while i < n and i < i + indel_length:
+                                indel += read_bases[i]
+                                i += 1
+
+                            # Write indel to output file
+                            out_f.write(f"[-] Deletion\t+{indel_length}\t{indel}\n")
+                            # Next base
+                            i += 1
+                        continue
                     
                     # Found mismatch
-                    elif char == any(["a","A","c","C","g","G","t","T"]) and char != ref_base:
+                    if char.upper() in "ACGT" and char.upper() != ref_base.upper():
                         # Write mismatch to output file
                         out_f.write(f"[!] Mismatch\t{char} != {ref_base}\n")
-                        # Since mismatches are only a single character, we don't need to jump further forward, let loop continue as written
+                        # Next base
+                        i += 1
+                        continue
 
-                    # Keep going!
+                    # If you didn't catch anything, keep going!
                     i += 1
