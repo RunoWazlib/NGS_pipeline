@@ -1,9 +1,11 @@
 from pipeline.main import load_config
 from pipeline.config_builder import generate_json_data_paired, generate_json_data_merged
+from pipeline.processing.q_trimmer import rolling_trim, simple_trim
+from pipeline.processing.q_trimmer import main as q_trim_main
 from pipeline.alignment.aligner import generate_ref_library
 from pipeline.config_validator import check_config_options
 
-import os, json, subprocess, pytest, shutil
+import os, json, subprocess, pytest, shutil, gzip
 from pathlib import Path
 
 @pytest.fixture
@@ -375,6 +377,79 @@ class TestBasicProcessing:
         assert Path(f"{target_output_dir}/sample1_R1_fastqc/fastqc_data.txt").exists()
 
     #TODO - Add processing tests for q-trimming
+    def test_q_trimmer_windowed(self, make_config_data):
+        config_data = make_config_data
+        config_data["core-parameters"] = {
+            "do-benchmarks" : False,
+            "do-processing" : True,
+            "do-alignment" : False,
+            "do-analysis" : False
+        }
+        config_data["processing-parameters"] = {
+            "do-qtrimming" : True,
+            "qtrimming-method" : "rolling-trim",
+            "trimming-window-size" : 5,
+            "trimming-quality-threshold" : 20
+        }
+
+        result = rolling_trim(gzip.open(config_data["paired-end-mode"]["R1"],"rt",encoding="utf-8"), 5, 20)
+
+        # Make sure we didn't lose any reads
+        assert len(result) == 226349 # line count / 4
+
+    def test_q_trimmer_simple(self, make_config_data):
+        config_data = make_config_data
+        config_data["core-parameters"] = {
+            "do-benchmarks" : False,
+            "do-processing" : True,
+            "do-alignment" : False,
+            "do-analysis" : False
+        }
+        config_data["processing-parameters"] = {
+            "do-qtrimming" : True,
+            "qtrimming-method" : "simple-trim",
+            "trimming-quality-threshold" : 20
+        }
+
+        result = simple_trim(gzip.open(config_data["paired-end-mode"]["R1"],"rt",encoding="utf-8"), 20)
+
+        # Make sure we didn't lose any reads
+        assert len(result) == 226349 # line count / 4
+
+    def test_q_trimmer_main(self, make_config_data, tmp_path):
+        config_data = make_config_data
+        config_data["core-parameters"] = {
+            "do-benchmarks" : False,
+            "do-processing" : True,
+            "do-alignment" : False,
+            "do-analysis" : False
+        }
+        config_data["processing-parameters"] = {
+            "do-qtrimming" : True,
+            "qtrimming-method" : "simple-trim",
+            "trimming-quality-threshold" : 20
+        }
+
+        q_trim_main(config_data["processing-parameters"], config_data["mode"], config_data, config_data["output-directory"])
+
+        # generates two files under current config settings
+        target = Path(config_data["output-directory"])
+        files = []
+        for file in target.iterdir():
+            files.append(file)
+        
+        assert len(files) == 3 # should make two files for the trimmed R1 and R2 reads, plus the original aligned_reads.bam file from the fixture
+
+        # Files are not empty
+        for file in target.glob("trimmed_*"):
+            try:
+                with gzip.open(file, "rt", encoding="utf-8") as f:
+                    if len(f.read()) > 0:
+                        assert True
+                    else:
+                        assert False
+            except FileNotFoundError:
+                assert False
 
 class TestBasicAlignment:
     def test_good_reference(self, make_config_data):
