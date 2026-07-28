@@ -34,7 +34,7 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
         },
         "core-parameters": {
             "do-benchmarks": True,
-            "do-processing": True,
+            "do-processing": False,
             "do-alignment": True,
             "do-analysis": True
         },
@@ -78,7 +78,7 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
             },
             "core-parameters": {
                 "do-benchmarks": True,
-                "do-processing": True,
+                "do-processing": False,
                 "do-alignment": True,
                 "do-analysis": True
             },

@@ -112,10 +112,10 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                     }
                     # Normalize by depth: read coverage / position
                     try:
-                        base_rates = {base: (count / depth) for base, count in base_counts.items()}
+                        base_rates = {base: (count) for base, count in base_counts.items()}
                         
                         # count calls identical to reference
-                        percent_identical = (base_counts[ref_base.upper()] / depth) if ref_base.upper() in base_counts else 0
+                        percent_identical = (base_counts[ref_base.upper()]) if ref_base.upper() in base_counts else 0
                         
                         # Sum mismatch + insertion + deletion counts (anything not reference base), then normalize by depth
                         # Since these mutations are not mutually exclusive in a read, this is not a mutation frequency (proportion of mutant reads / coverage) - this is a per position event rate (mutant event / coverage)

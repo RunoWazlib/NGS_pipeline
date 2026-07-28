@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pipeline.processing.fastqc_processing, pipeline.processing.q_trimmer, pipeline.alignment.aligner, pipeline.analysis.analysis_controller
 from pipeline.config_validator import check_config_options
-import json, argparse, time, subprocess
+import json, argparse, time, subprocess, sys
 
 def load_config(config_file_path):
     with open(config_file_path, 'r') as f:
@@ -17,6 +17,11 @@ def main():
     parser = argparse.ArgumentParser(description='Next-gen sequencing analysis driver.')
     parser.add_argument('--config', type=str, help='Path to the configuration file.')
     args = parser.parse_args()
+
+    # If no args, print help message
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
     # Load configuration
     config = load_config(args.config)
