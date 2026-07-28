@@ -20,6 +20,8 @@ dev = [
 
 [project.scripts]
 ngs-pipeline = "pipeline.main:main"
+shape-analysis = "pipeline.shape_analysis_driver:main"
+structure-builder = "pipeline.structure_builder:main"
 config-builder = "pipeline.config_builder:main"
 update-deps = "pipeline.utils:run_dep_update"
 setup = "pipeline.utils:run_setup"
