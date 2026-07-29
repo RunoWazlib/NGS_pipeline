@@ -10,13 +10,10 @@
 module load conda
 conda activate seq
 
-# Add the path to your `ngs_pipeline` directory to $PATH
-export PATH="$WORK/ngs_pipeline/":$PATH
-
 # Run pipeline over all config (.json) files in the current directory
 for config_file in *.json; do
     echo "Processing $config_file"
-    ngs_pipeline.py --config "$config_file"
+    ngs-pipeline --config "$config_file"
 done
 
 # Review ngs_pipeline_%j.log for all typically printed outputs, like total evaluation time
