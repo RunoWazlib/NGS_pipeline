@@ -32,6 +32,16 @@ def align_reads_merged(reference_fasta_path, merged_reads_path, output_bam_path)
         print(f"{e}")
         return None
 
+def align_reads_unpaired(reference_fasta_path, unpaired_reads_path, output_bam_path):
+    # Align merged reads to the reference library using bowtie2
+    try:
+        command = f"bowtie2 -x {reference_fasta_path} -U {unpaired_reads_path} --local --sensitive-local --ignore-quals --maxins 500 2> {output_bam_path}.log | samtools view -bS - | samtools sort -o {output_bam_path} && samtools index {output_bam_path}"
+        subprocess.run(command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print("[!] Error aligning reads")
+        print(f"{e}")
+        return None
+
 def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
     # Track the time taken for alignment
     start_time = time.perf_counter()
@@ -41,6 +51,8 @@ def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
         R2_path = reads_path["R2"]
     elif alignment_mode == "merged-mode":
         merged_path = reads_path["R1"]
+    elif alignment_mode == "unpaired-mode":
+        unpaired_path = reads_path["R1"]
 
     # Check if the reference file exists as index for bowtie2
     try:
@@ -60,6 +72,8 @@ def main(alignment_mode, reference_fasta_path, reads_path, output_directory):
         align_reads_paired(ref_library, R1_path, R2_path, output_directory + "/aligned_reads.bam")
     elif alignment_mode == "merged-mode":
         align_reads_merged(ref_library, merged_path, output_directory + "/aligned_reads.bam")
+    elif alignment_mode == "unpaired-mode":
+        align_reads_unpaired(ref_library, unpaired_path, output_directory + "/aligned_reads.bam")
 
     # Track the time taken for alignment
     end_time = time.perf_counter()

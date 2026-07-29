@@ -85,7 +85,7 @@ def mpileup_cleaner(read_bases):
 def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
     # Write a header to output file for the full mpileup analysis
     with open(f"{output_directory}/Full_analysis.txt", 'w') as out_f:
-        out_f.write("Position\tRate_Identical\tReference_Base\tRate_A\tRate_C\tRate_G\tRate_T\tRate_Insertion\tRate_Deletion\tMutation_Rate\tDepth\n")
+        out_f.write("Position\tIdentical_Calls\tReference_Base\tCount_A\tCount_C\tCount_G\tCount_T\tCount_Insertion\tCount_Deletion\tMutation_Count\tDepth\n")
 
         # Generate a full analysis of the mpileup file, including percent identical to reference, base composition, and indel frequencies at each position
         with open(mpileup_file_path, 'r') as f:
@@ -112,10 +112,10 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                     }
                     # Normalize by depth: read coverage / position
                     try:
-                        base_rates = {base: (count / depth) for base, count in base_counts.items()}
+                        base_rates = {base: (count) for base, count in base_counts.items()}
                         
                         # count calls identical to reference
-                        percent_identical = (base_counts[ref_base.upper()] / depth) if ref_base.upper() in base_counts else 0
+                        count_identical = (base_counts[ref_base.upper()]) if ref_base.upper() in base_counts else 0
                         
                         # Sum mismatch + insertion + deletion counts (anything not reference base), then normalize by depth
                         # Since these mutations are not mutually exclusive in a read, this is not a mutation frequency (proportion of mutant reads / coverage) - this is a per position event rate (mutant event / coverage)
@@ -125,11 +125,12 @@ def generate_mpileup_full_analysis(mpileup_file_path, output_directory):
                     # If there's no depth, we don't know anything!
                     except ZeroDivisionError:
                         base_rates = {"A":0,"C":0,"G":0,"T":0,"+":0,"-":0}
-                        percent_identical = 0
+                        count_identical = 0
                         mutation_rate = 0
 
                     # Output the analysis results for this position
-                    out_f.write(f"{pos}\t{percent_identical:.2f}\t{ref_base}\t{base_rates['A']:.2f}\t{base_rates['C']:.2f}\t{base_rates['G']:.2f}\t{base_rates['T']:.2f}\t{base_rates['+']:.2f}\t{base_rates['-']:.2f}\t{mutation_rate:.2f}\t{depth}\n")
+                    # TODO - Depth normalization, add in :.2f 
+                    out_f.write(f"{pos}\t{count_identical}\t{ref_base}\t{base_rates['A']}\t{base_rates['C']}\t{base_rates['G']}\t{base_rates['T']}\t{base_rates['+']}\t{base_rates['-']}\t{mutation_rate}\t{depth}\n")
 
 def generate_mpileup_simple_analysis(mpileup_file_path, output_directory):
     # Write a header to output file for the simple mpileup analysis

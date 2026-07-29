@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, argparse
+import json, os, argparse, sys
 from pathlib import Path
 
 def generate_json_data_paired(reference_fasta_path, output_directory_name="output"):
@@ -34,7 +34,7 @@ def generate_json_data_paired(reference_fasta_path, output_directory_name="outpu
         },
         "core-parameters": {
             "do-benchmarks": True,
-            "do-processing": True,
+            "do-processing": False,
             "do-alignment": True,
             "do-analysis": True
         },
@@ -78,7 +78,50 @@ def generate_json_data_merged(reference_fasta_path, output_directory_name="outpu
             },
             "core-parameters": {
                 "do-benchmarks": True,
-                "do-processing": True,
+                "do-processing": False,
+                "do-alignment": True,
+                "do-analysis": True
+            },
+            "analysis-parameters": {
+                "do-alignment-stats": True,
+                "do-alignment-visualization": True,
+                "do-alignment-score-plot": True,
+                "do-mpileup": True,
+                "do-mpileup-fullanalysis": True,
+                "do-mpileup-simpleanalysis": True,
+                "do-mpileup-visualization": True,
+                "do-indel-analysis": True,
+                "do-association-analysis": True
+            },
+            "processing-parameters": {
+                "do-qtrimming": True,
+                "qtrimming-method": "rolling-trim",
+                "trimming-window-size": 5,
+                "trimming-quality-threshold": 20
+            }
+        }
+    return config_data
+
+def generate_json_data_unpaired(reference_fasta_path, output_directory_name="output"):
+    directory = Path(os.getcwd())
+    # We will just look for files with "R" as a proxy for single readthrough files
+    # merged_files = list(directory.glob("*merged.fastq.gz"))
+    unpaired_files = list(directory.glob("*R*.fastq.gz"))
+
+    config_data = {}
+    for f in unpaired_files:
+        fname = f.name
+        sample = fname.split("_001")[0].rstrip("_")
+        config_data[sample] = {
+            "mode": "unpaired-mode",
+            "reference-fasta": reference_fasta_path,
+            "output-directory": f"{sample}_{output_directory_name}",
+            "unpaired-mode": {
+                "R1": str(f)
+            },
+            "core-parameters": {
+                "do-benchmarks": True,
+                "do-processing": False,
                 "do-alignment": True,
                 "do-analysis": True
             },
@@ -107,12 +150,19 @@ def main():
     parser = argparse.ArgumentParser(description="Generate JSON config for NGS pipeline")
     parser.add_argument("--reference", default="reference.fasta", help="Path to reference FASTA file with respect to cwd or full path")
     parser.add_argument("--output", default="output", help="Output directory name")
-    parser.add_argument("--mode", choices=["paired-end", "merged"], default="paired-end", help="Analysis mode - paired-end (aka. double-readthrough) or merged (aka. single-readthrough)")
+    parser.add_argument("--mode", choices=["paired-end", "merged", "unpaired"], default="paired-end", help="Analysis mode - paired-end (aka. double-readthrough) or merged (aka. single-readthrough), or unpaired (aka single-readthrough)")
 
     args = parser.parse_args()
 
+    # If no args, print help message
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
     if args.mode == "paired-end":
         config_data = generate_json_data_paired(args.reference, args.output)
+    if args.mode == "unpaired":
+        config_data = generate_json_data_unpaired(args.reference, args.output)
     else:
         config_data = generate_json_data_merged(args.reference, args.output)
 

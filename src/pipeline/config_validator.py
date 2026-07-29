@@ -10,8 +10,10 @@ def check_config_options(config_data={}):
             pass
         elif config_data["mode"] == "merged-mode":
             pass
+        elif config_data["mode"] == "unpaired-mode":
+            pass
         else:
-            raise ValueError("[!] Invalid mode specified. Use 'paired-end-mode' or 'merged-mode'")
+            raise ValueError("[!] Invalid mode specified. Use 'paired-end-mode', 'merged-mode', or 'unpaired-mode")
     except KeyError:
         raise ValueError("[!] No mode specified - Please specify a valid mode.")
     
