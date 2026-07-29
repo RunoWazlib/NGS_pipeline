@@ -133,7 +133,7 @@ class TestBasicInitialization:
             f.write("dummy R1 content")
         with open(sample_r2, 'w') as f:
             f.write("dummy R2 content")
-        command = f"config-builder"
+        command = f"config-builder --reference {reference_fasta_path}, --output {output_directory_name}"
         subprocess.run(command, shell=True, check=True)
 
         assert Path(f"{tmp_path}/generated_config_sample1.json").exists()
